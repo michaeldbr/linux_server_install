@@ -8,13 +8,14 @@ sudo ./install_server.sh
 
 ## Optie B (copy/paste vanaf je eigen machine via SSH)
 
-Gebruik deze command (pas server, repo-url en branch aan):
+Gebruik deze command (pas server en branch aan):
 
-ssh root@<NIEUWE_SERVER_IP> 'REPO_URL="https://github.com/michaeldbr/linux_server_install.git" BRANCH="main" bash -s' < scripts/00_common/remote_bootstrap.sh
+ssh -tt root@<NIEUWE_SERVER_IP> 'REPO_URL="https://github.com/michaeldbr/linux_server_install.git" BRANCH="main" bash -s' < scripts/00_common/remote_bootstrap.sh
 
 Wat dit doet op de nieuwe server:
 - Installeert tijdelijk `git` (alleen als nodig)
 - Haalt deze repository binnen
 - Voert `install_server.sh` uit
+- Installeert Webmin, vraagt wachtwoord voor Webmin-user `michael`, en zet Webmin op poort `40112`
 - Verwijdert tijdelijke scriptbestanden weer
 - Verwijdert `git` weer als die alleen voor deze run is geïnstalleerd

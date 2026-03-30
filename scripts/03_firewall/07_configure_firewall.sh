@@ -12,7 +12,7 @@ iptables -A ip -s "${ALLOWED_IP_2}" -j ACCEPT
 iptables -A ip -j DROP
 
 for proto in tcp udp; do
-  for port in 40111 40112; do
+  for port in "${SSH_PORT}" "${WEBMIN_PORT}"; do
     while iptables -C INPUT -p "${proto}" --dport "${port}" -j ip 2>/dev/null; do
       iptables -D INPUT -p "${proto}" --dport "${port}" -j ip
     done
