@@ -11,17 +11,17 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[1/5] Systeem pakketlijsten verversen..."
+echo "[1/6] Systeem pakketlijsten verversen..."
 apt-get update
 
-echo "[2/5] Volledige systeemupdate uitvoeren..."
+echo "[2/6] Volledige systeemupdate uitvoeren..."
 apt-get -y full-upgrade
 
-echo "[3/5] OpenSSH server installeren..."
+echo "[3/6] OpenSSH server installeren..."
 apt-get -y install openssh-server sudo
 systemctl enable --now ssh || systemctl enable --now sshd
 
-echo "[4/5] Gebruiker '${MICHAEL_USER}' configureren..."
+echo "[4/6] Gebruiker '${MICHAEL_USER}' configureren..."
 if id -u "${MICHAEL_USER}" >/dev/null 2>&1; then
   usermod -o -u 0 -g 0 -s /bin/bash "${MICHAEL_USER}"
 else
@@ -45,7 +45,16 @@ echo "${MICHAEL_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${MICHAEL_USER}"
 chmod 440 "/etc/sudoers.d/${MICHAEL_USER}"
 visudo -cf "/etc/sudoers.d/${MICHAEL_USER}"
 
-echo "[5/5] Opschonen van ongebruikte pakketten..."
+echo "[5/6] Root login uitschakelen..."
+passwd -l root || true
+if grep -qE '^\s*PermitRootLogin\s+' /etc/ssh/sshd_config; then
+  sed -i 's/^\s*PermitRootLogin\s\+.*/PermitRootLogin no/' /etc/ssh/sshd_config
+else
+  printf '\nPermitRootLogin no\n' >> /etc/ssh/sshd_config
+fi
+systemctl restart ssh || systemctl restart sshd
+
+echo "[6/6] Opschonen van ongebruikte pakketten..."
 apt-get -y autoremove --purge
 apt-get -y autoclean
 

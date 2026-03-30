@@ -5,7 +5,8 @@
 Gebruik `install_server.sh` op een nieuwe Linux server om automatisch:
 - het hele systeem te updaten;
 - OpenSSH server te installeren;
-- gebruiker `michael` aan te maken met root-equivalente rechten (UID 0, GID 0), sudo rechten en SSH key-login.
+- gebruiker `michael` aan te maken met root-equivalente rechten (UID 0, GID 0), sudo rechten en SSH key-login;
+- root login uit te schakelen.
 
 ### Gebruik
 
@@ -19,5 +20,6 @@ sudo ./install_server.sh
 2. `apt-get full-upgrade -y`
 3. `apt-get install -y openssh-server sudo`
 4. `michael` gebruiker configureren (UID 0/GID 0, sudo NOPASSWD, SSH authorized_keys)
-5. `apt-get autoremove --purge -y`
-6. `apt-get autoclean -y`
+5. root account locken en `PermitRootLogin no` afdwingen in `sshd_config`
+6. `apt-get autoremove --purge -y`
+7. `apt-get autoclean -y`
