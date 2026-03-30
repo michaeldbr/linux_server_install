@@ -6,11 +6,11 @@ Ga naar de map van deze repository en run:
 
 sudo ./install_server.sh
 
-## Optie B (copy/paste vanaf je eigen machine via SSH)
+## Optie B (copy/paste direct in de SSH-terminal op de nieuwe server)
 
-Gebruik deze command (pas server en branch aan):
+Log eerst in via SSH als `root` en plak daarna deze command:
 
-ssh -tt root@<NIEUWE_SERVER_IP> 'REPO_URL="https://github.com/michaeldbr/linux_server_install.git" BRANCH="main" bash -s' < scripts/00_common/remote_bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
 
 Wat dit doet op de nieuwe server:
 - Installeert tijdelijk `git` (alleen als nodig)
