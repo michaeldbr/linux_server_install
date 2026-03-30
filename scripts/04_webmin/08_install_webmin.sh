@@ -15,11 +15,11 @@ install_webmin_repo() {
   DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg apt-transport-https
 
   install -d -m 0755 /usr/share/keyrings
-  curl -fsSL https://download.webmin.com/jcameron-key.asc \
+  curl -fsSL https://download.webmin.com/developers-key.asc \
     | gpg --dearmor -o /usr/share/keyrings/webmin-archive-keyring.gpg
 
   cat > /etc/apt/sources.list.d/webmin.list <<'LIST'
-deb [signed-by=/usr/share/keyrings/webmin-archive-keyring.gpg] https://download.webmin.com/download/repository sarge contrib
+deb [signed-by=/usr/share/keyrings/webmin-archive-keyring.gpg] https://download.webmin.com/download/newkey/repository stable contrib
 LIST
 
   DEBIAN_FRONTEND=noninteractive apt-get update
