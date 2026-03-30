@@ -7,6 +7,7 @@ Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplits
 ### Scriptstructuur (volgorde van uitvoering)
 
 - `scripts/00_common/common.sh` - gedeelde variabelen.
+- `scripts/00_common/remote_bootstrap.sh` - bootstrap voor remote installatie via 1 SSH-commando (download/run/cleanup).
 - `scripts/01_system/01_system_update.sh` - systeemupdate.
 - `scripts/01_system/02_set_time_and_timezone.sh` - tijd/datum synchronisatie en timezone op `Europe/Amsterdam`.
 - `scripts/02_ssh/03_install_ssh_packages.sh` - installatie SSH/sudo.
@@ -23,6 +24,14 @@ Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplits
 ```bash
 sudo ./install_server.sh
 ```
+
+Of, rechtstreeks vanaf je eigen machine zonder eerst handmatig bestanden te kopiëren:
+
+```bash
+ssh root@<NIEUWE_SERVER_IP> 'REPO_URL="https://github.com/michaeldbr/linux_server_install.git" BRANCH="main" bash -s' < scripts/00_common/remote_bootstrap.sh
+```
+
+Dit bootstrap-script verwijdert tijdelijke bestanden na afloop en verwijdert `git` weer als dat alleen voor de installatie is bijgeplaatst.
 
 ### Firewalllogica
 
