@@ -1,0 +1,5 @@
+# Uitvoeren op de nieuwe server
+
+Ga naar de map van deze repository en run:
+
+sudo ./install_server.sh
