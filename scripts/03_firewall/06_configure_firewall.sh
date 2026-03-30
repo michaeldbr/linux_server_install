@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=scripts/common.sh
-source "${SCRIPT_DIR}/common.sh"
+# shellcheck source=scripts/00_common/common.sh
+source "${SCRIPT_DIR}/../00_common/common.sh"
 
 iptables -N ip 2>/dev/null || true
 iptables -F ip
@@ -21,10 +21,6 @@ for proto in tcp udp; do
 done
 
 iptables-save > /etc/iptables/rules.v4
-
-# Activate at boot = yes.
 systemctl enable netfilter-persistent
-
-# Apply config now.
 netfilter-persistent save
 netfilter-persistent reload

@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=scripts/common.sh
-source "${SCRIPT_DIR}/common.sh"
+# shellcheck source=scripts/00_common/common.sh
+source "${SCRIPT_DIR}/../00_common/common.sh"
 
 passwd -l root || true
 

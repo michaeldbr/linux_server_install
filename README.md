@@ -2,18 +2,18 @@
 
 ## Installatiescript
 
-Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplitst in meerdere scripts voor overzicht en onderhoud.
+Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplitst in mappen per programma/app en scripts met doorlopende nummering.
 
-### Scriptstructuur
+### Scriptstructuur (volgorde van uitvoering)
 
-- `install_server.sh` - hoofdscript/orchestratie.
-- `scripts/common.sh` - gedeelde variabelen (gebruikersnaam, SSH-key, poort, allowed IP's).
-- `scripts/10_system_update.sh` - systeemupdate.
-- `scripts/20_install_ssh_and_firewall_packages.sh` - installatie OpenSSH/sudo/firewall pakketten.
-- `scripts/30_configure_michael_user.sh` - user `michael` + SSH key + sudoers.
-- `scripts/40_harden_ssh.sh` - root login uit + SSH op poort `40111`.
-- `scripts/50_configure_firewall.sh` - chain `ip`, INPUT forwarding regels voor poorten `40111` en `40112` (TCP/UDP), netfilter-persistent op auto-start en directe apply.
-- `scripts/60_cleanup.sh` - cleanup.
+- `scripts/00_common/common.sh` - gedeelde variabelen.
+- `scripts/01_system/01_system_update.sh` - systeemupdate.
+- `scripts/02_ssh/02_install_ssh_packages.sh` - installatie SSH/sudo.
+- `scripts/02_ssh/03_configure_michael_user.sh` - user `michael` + SSH key + sudoers.
+- `scripts/02_ssh/04_harden_ssh.sh` - root login uit + SSH op poort `40111`.
+- `scripts/03_firewall/05_install_firewall_packages.sh` - installatie firewall pakketten.
+- `scripts/03_firewall/06_configure_firewall.sh` - chain `ip`, INPUT forwarding regels voor poorten `40111` en `40112` (TCP/UDP), boot-activatie en apply.
+- `scripts/04_system/07_cleanup.sh` - cleanup.
 
 ### Gebruik
 
