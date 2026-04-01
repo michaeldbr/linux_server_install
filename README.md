@@ -14,8 +14,7 @@ Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplits
 - `scripts/02_ssh/04_configure_michael_user.sh` - user `michael` + SSH key + sudoers.
 - `scripts/02_ssh/05_harden_ssh.sh` - root login uit + SSH op poort `40111`.
 - `scripts/03_firewall/06_install_firewall_packages.sh` - installatie firewall pakketten.
-- `scripts/03_firewall/07_configure_firewall.sh` - chain `ip`, INPUT forwarding regels voor poorten `40111` en `40112` (TCP/UDP), boot-activatie en apply.
-- `scripts/04_webmin/08_install_webmin.sh` - installeert Webmin, maakt Webmin-user `michael` aan met wachtwoordprompt en zet Webmin op poort `40112`.
+- `scripts/03_firewall/07_configure_firewall.sh` - chain `ip`, INPUT forwarding regel voor SSH poort `40111` (TCP), opent WireGuard UDP poort `51820`, boot-activatie en apply.
 - `scripts/03_firewall/09_install_wireguard.sh` - installatie van WireGuard.
 - `scripts/04_system/10_verify_and_repair.sh` - controleert of alles correct is geïnstalleerd/geconfigureerd en probeert mislukte onderdelen gericht opnieuw.
 - `scripts/04_system/11_cleanup.sh` - cleanup.
@@ -32,8 +31,6 @@ Of, rechtstreeks vanaf je eigen machine zonder eerst handmatig bestanden te kopi
 ssh -tt root@<NIEUWE_SERVER_IP> 'REPO_URL="https://github.com/michaeldbr/linux_server_install.git" BRANCH="main" bash -s' < scripts/00_common/remote_bootstrap.sh
 ```
 
-> Let op: Webmin vraagt om een wachtwoord voor user `michael`. Gebruik daarom `ssh -tt` (met TTY), of zet vooraf `WEBMIN_PASSWORD` in de SSH command.
-
 Dit bootstrap-script verwijdert tijdelijke bestanden na afloop en verwijdert `git` weer als dat alleen voor de installatie is bijgeplaatst.
 
 ### Firewalllogica
@@ -42,5 +39,6 @@ Dit bootstrap-script verwijdert tijdelijke bestanden na afloop en verwijdert `gi
   - `ACCEPT` als source `188.207.111.246`
   - `ACCEPT` als source `145.53.102.212`
   - anders `DROP`
-- In `INPUT` wordt verkeer voor poorten `40111` en `40112` (TCP/UDP) doorgestuurd naar chain `ip`.
+- In `INPUT` wordt SSH verkeer op poort `40111` (TCP) doorgestuurd naar chain `ip`.
+- In `INPUT` wordt WireGuard verkeer op poort `51820` (UDP) direct toegestaan.
 - Na configuratie wordt netfilter-persistent op boot geactiveerd (`enable`) en de config direct toegepast (`save` + `reload`).

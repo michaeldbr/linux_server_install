@@ -11,14 +11,17 @@ iptables -A ip -s "${ALLOWED_IP_1}" -j ACCEPT
 iptables -A ip -s "${ALLOWED_IP_2}" -j ACCEPT
 iptables -A ip -j DROP
 
-for proto in tcp udp; do
-  for port in "${SSH_PORT}" "${WEBMIN_PORT}"; do
-    while iptables -C INPUT -p "${proto}" --dport "${port}" -j ip 2>/dev/null; do
-      iptables -D INPUT -p "${proto}" --dport "${port}" -j ip
-    done
-    iptables -A INPUT -p "${proto}" --dport "${port}" -j ip
-  done
+
+# WireGuard: UDP poort openzetten (server endpoint)
+while iptables -C INPUT -p udp --dport "${WIREGUARD_PORT}" -j ACCEPT 2>/dev/null; do
+  iptables -D INPUT -p udp --dport "${WIREGUARD_PORT}" -j ACCEPT
 done
+iptables -A INPUT -p udp --dport "${WIREGUARD_PORT}" -j ACCEPT
+
+while iptables -C INPUT -p tcp --dport "${SSH_PORT}" -j ip 2>/dev/null; do
+  iptables -D INPUT -p tcp --dport "${SSH_PORT}" -j ip
+done
+iptables -A INPUT -p tcp --dport "${SSH_PORT}" -j ip
 
 iptables-save > /etc/iptables/rules.v4
 systemctl enable netfilter-persistent
