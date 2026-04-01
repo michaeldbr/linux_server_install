@@ -75,6 +75,17 @@ if [[ ! -f /etc/wireguard/wg0.conf ]]; then
   echo "[VERIFY] WAARSCHUWING: /etc/wireguard/wg0.conf ontbreekt. WireGuard is wel geïnstalleerd, maar nog niet geconfigureerd."
 fi
 
+if ! ip a show wg0 >/dev/null 2>&1; then
+  echo "[VERIFY] WAARSCHUWING: wg0 interface niet actief, wg-quick@wg0 wordt gestart."
+  systemctl enable wg-quick@wg0
+  systemctl restart wg-quick@wg0
+fi
+
+if ! wg >/dev/null 2>&1; then
+  echo "[VERIFY] WAARSCHUWING: 'wg' output niet beschikbaar, probeer WireGuard installatiestap opnieuw."
+  retry_script "scripts/03_firewall/09_install_wireguard.sh"
+fi
+
 if [[ -f /var/run/reboot-required ]]; then
   echo "[VERIFY] WAARSCHUWING: Reboot vereist om nieuwste kernel te laden."
 fi
