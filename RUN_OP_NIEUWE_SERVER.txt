@@ -12,7 +12,6 @@ Gebruik deze command (pas server en branch aan):
 
 curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
 
-ssh -tt root@<NIEUWE_SERVER_IP> 'REPO_URL="https://github.com/michaeldbr/linux_server_install.git" BRANCH="main" bash -s' < scripts/00_common/remote_bootstrap.sh
 
 Wat dit doet op de nieuwe server:
 - Installeert tijdelijk `git` (alleen als nodig)
