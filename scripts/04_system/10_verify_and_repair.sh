@@ -14,7 +14,7 @@ retry_script() {
 
 # 1) Benodigde pakketten
 missing_packages=()
-for pkg in openssh-server sudo iptables iptables-persistent netfilter-persistent tzdata wireguard wireguard-tools; do
+for pkg in openssh-server sudo iptables iptables-persistent netfilter-persistent tzdata wireguard wireguard-tools haproxy keepalived kubelet kubeadm kubectl; do
   if ! dpkg -s "${pkg}" >/dev/null 2>&1; then
     missing_packages+=("${pkg}")
   fi
@@ -24,6 +24,7 @@ if [[ ${#missing_packages[@]} -gt 0 ]]; then
   retry_script "scripts/02_ssh/03_install_ssh_packages.sh"
   retry_script "scripts/03_firewall/06_install_firewall_packages.sh"
   retry_script "scripts/03_firewall/09_install_wireguard.sh"
+  retry_script "scripts/05_kubernetes/08_install_cluster_packages.sh"
   retry_script "scripts/01_system/02_set_time_and_timezone.sh"
 fi
 

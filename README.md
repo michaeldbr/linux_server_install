@@ -16,6 +16,7 @@ Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplits
 - `scripts/03_firewall/06_install_firewall_packages.sh` - installatie firewall pakketten.
 - `scripts/03_firewall/07_configure_firewall.sh` - chain `ip`, INPUT forwarding regel voor SSH poort `40111` (TCP), opent WireGuard UDP poort `51820`, boot-activatie en apply.
 - `scripts/03_firewall/09_install_wireguard.sh` - installatie van WireGuard.
+- `scripts/05_kubernetes/08_install_cluster_packages.sh` - installatie van HAProxy, Keepalived en Kubernetes master-pakketten (`kubelet`, `kubeadm`, `kubectl`).
 - `scripts/04_system/10_verify_and_repair.sh` - controleert of alles correct is geïnstalleerd/geconfigureerd en probeert mislukte onderdelen gericht opnieuw.
 - `scripts/04_system/11_cleanup.sh` - cleanup.
 
