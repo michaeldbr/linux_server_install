@@ -23,7 +23,7 @@ done
 if [[ ${#missing_packages[@]} -gt 0 ]]; then
   retry_script "scripts/02_ssh/03_install_ssh_packages.sh"
   retry_script "scripts/03_firewall/06_install_firewall_packages.sh"
-  retry_script "scripts/03_firewall/09_install_wireguard.sh"
+  retry_script "scripts/04_wireguard/08_install_wireguard.sh"
   retry_script "scripts/01_system/02_set_time_and_timezone.sh"
 fi
 
@@ -68,7 +68,7 @@ if [[ "$(systemctl is-enabled netfilter-persistent 2>/dev/null || true)" != "ena
 fi
 
 if ! command -v wg >/dev/null 2>&1; then
-  retry_script "scripts/03_firewall/09_install_wireguard.sh"
+  retry_script "scripts/04_wireguard/08_install_wireguard.sh"
 fi
 
 if [[ ! -f /etc/wireguard/wg0.conf ]]; then
@@ -83,7 +83,7 @@ fi
 
 if ! wg >/dev/null 2>&1; then
   echo "[VERIFY] WAARSCHUWING: 'wg' output niet beschikbaar, probeer WireGuard installatiestap opnieuw."
-  retry_script "scripts/03_firewall/09_install_wireguard.sh"
+  retry_script "scripts/04_wireguard/08_install_wireguard.sh"
 fi
 
 if [[ -f /var/run/reboot-required ]]; then
