@@ -45,6 +45,6 @@ git clone --depth 1 --branch "${BRANCH}" "${REPO_URL}" "${repo_dir}"
 
 echo "Installatie uitvoeren..."
 cd "${repo_dir}"
-./install_server.sh
+bash ./install_server.sh
 
 echo "Klaar. Tijdelijke bestanden zijn opgeruimd."

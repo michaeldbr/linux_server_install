@@ -9,7 +9,7 @@ source "${REPO_ROOT}/scripts/00_common/common.sh"
 retry_script() {
   local script_path="$1"
   echo "[VERIFY] Herstel: ${script_path}"
-  "${REPO_ROOT}/${script_path}"
+  bash "${REPO_ROOT}/${script_path}"
 }
 
 # 1) Benodigde pakketten
@@ -42,6 +42,14 @@ if ! id -u "${MICHAEL_USER}" >/dev/null 2>&1 || ! grep -Fq "${MICHAEL_KEY}" "/ho
   retry_script "scripts/02_ssh/04_configure_michael_user.sh"
 fi
 
+if [[ "$(id -u "${MICHAEL_USER}")" -lt 1000 ]]; then
+  retry_script "scripts/02_ssh/04_configure_michael_user.sh"
+fi
+
+if ! id -nG "${MICHAEL_USER}" | grep -qw sudo; then
+  retry_script "scripts/02_ssh/04_configure_michael_user.sh"
+fi
+
 # 5) Firewall rules + persistence
 if ! iptables -C INPUT -p tcp --dport "${SSH_PORT}" -j ip >/dev/null 2>&1; then
   retry_script "scripts/03_firewall/07_configure_firewall.sh"
@@ -57,6 +65,29 @@ fi
 
 if [[ "$(systemctl is-enabled netfilter-persistent 2>/dev/null || true)" != "enabled" ]]; then
   retry_script "scripts/03_firewall/07_configure_firewall.sh"
+fi
+
+if ! command -v wg >/dev/null 2>&1; then
+  retry_script "scripts/03_firewall/09_install_wireguard.sh"
+fi
+
+if [[ ! -f /etc/wireguard/wg0.conf ]]; then
+  echo "[VERIFY] WAARSCHUWING: /etc/wireguard/wg0.conf ontbreekt. WireGuard is wel geïnstalleerd, maar nog niet geconfigureerd."
+fi
+
+if ! ip a show wg0 >/dev/null 2>&1; then
+  echo "[VERIFY] WAARSCHUWING: wg0 interface niet actief, wg-quick@wg0 wordt gestart."
+  systemctl enable wg-quick@wg0
+  systemctl restart wg-quick@wg0
+fi
+
+if ! wg >/dev/null 2>&1; then
+  echo "[VERIFY] WAARSCHUWING: 'wg' output niet beschikbaar, probeer WireGuard installatiestap opnieuw."
+  retry_script "scripts/03_firewall/09_install_wireguard.sh"
+fi
+
+if [[ -f /var/run/reboot-required ]]; then
+  echo "[VERIFY] WAARSCHUWING: Reboot vereist om nieuwste kernel te laden."
 fi
 
 echo "[VERIFY] Controle en herstel afgerond."
