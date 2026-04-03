@@ -11,12 +11,19 @@ iptables -A ip -s "${ALLOWED_IP_1}" -j ACCEPT
 iptables -A ip -s "${ALLOWED_IP_2}" -j ACCEPT
 iptables -A ip -j DROP
 
+iptables -N wireguard 2>/dev/null || true
+iptables -F wireguard
+iptables -A wireguard -j DROP
+
 
 # WireGuard: UDP poort openzetten (server endpoint)
+while iptables -C INPUT -p udp --dport "${WIREGUARD_PORT}" -j wireguard 2>/dev/null; do
+  iptables -D INPUT -p udp --dport "${WIREGUARD_PORT}" -j wireguard
+done
 while iptables -C INPUT -p udp --dport "${WIREGUARD_PORT}" -j ACCEPT 2>/dev/null; do
   iptables -D INPUT -p udp --dport "${WIREGUARD_PORT}" -j ACCEPT
 done
-iptables -A INPUT -p udp --dport "${WIREGUARD_PORT}" -j ACCEPT
+iptables -A INPUT -p udp --dport "${WIREGUARD_PORT}" -j wireguard
 
 while iptables -C INPUT -p tcp --dport "${SSH_PORT}" -j ip 2>/dev/null; do
   iptables -D INPUT -p tcp --dport "${SSH_PORT}" -j ip

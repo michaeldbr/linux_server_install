@@ -40,5 +40,6 @@ Dit bootstrap-script verwijdert tijdelijke bestanden na afloop en verwijdert `gi
   - `ACCEPT` als source `145.53.102.212`
   - anders `DROP`
 - In `INPUT` wordt SSH verkeer op poort `40111` (TCP) doorgestuurd naar chain `ip`.
-- In `INPUT` wordt WireGuard verkeer op poort `51820` (UDP) direct toegestaan.
+- In `INPUT` wordt WireGuard verkeer op poort `51820` (UDP) doorgestuurd naar chain `wireguard`.
+- Chain `wireguard` bevat als eerste regel `DROP`.
 - Na configuratie wordt netfilter-persistent op boot geactiveerd (`enable`) en de config direct toegepast (`save` + `reload`).
