@@ -59,7 +59,15 @@ fi
 
 while true; do
   read -r -p "Wat is het interne IP adres van deze server? (10.0.0...): " INPUT_SERVER_IP
+  read -r -p "Voer het interne IP adres nogmaals in ter verificatie: " VERIFY_SERVER_IP
+
   INPUT_SERVER_IP="${INPUT_SERVER_IP:-${DEFAULT_SERVER_IP}}"
+  VERIFY_SERVER_IP="${VERIFY_SERVER_IP:-${DEFAULT_SERVER_IP}}"
+
+  if [[ "${INPUT_SERVER_IP}" != "${VERIFY_SERVER_IP}" ]]; then
+    echo "[WG] Invoer komt niet overeen. Probeer het opnieuw."
+    continue
+  fi
 
   if [[ "${INPUT_SERVER_IP}" =~ ^10\.0\.0\.[0-9]{1,3}$ ]]; then
     LAST_OCTET="${INPUT_SERVER_IP##*.}"
