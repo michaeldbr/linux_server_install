@@ -10,8 +10,6 @@ if [[ ${EUID} -ne 0 ]]; then
   exit 1
 fi
 
-reboot_required=0
-
 echo "[INIT] Shell scripts uitvoerbaar maken..."
 find "${SCRIPT_DIR}/scripts" -type f -name '*.sh' -exec chmod +x {} +
 
@@ -46,22 +44,5 @@ echo "[10/10] Opschonen van ongebruikte pakketten..."
 bash "${SCRIPT_DIR}/scripts/04_system/11_cleanup.sh"
 
 echo "Klaar. SSH draait op poort ${SSH_PORT}. Tijdzone staat op Europe/Amsterdam."
-
-running_kernel="$(uname -r)"
-boot_target_kernel="$(basename "$(readlink -f /boot/vmlinuz 2>/dev/null || true)" | sed 's/^vmlinuz-//')"
-if [[ -n "${boot_target_kernel}" && "${running_kernel}" != "${boot_target_kernel}" ]]; then
-  echo "WAARSCHUWING: Nieuwe kernel gedetecteerd maar nog niet actief."
-  echo " - Running kernel : ${running_kernel}"
-  echo " - Nieuwe kernel  : ${boot_target_kernel}"
-  reboot_required=1
-fi
-
-if [[ -f /var/run/reboot-required ]]; then
-  echo "WAARSCHUWING: Reboot vereist om alle updates volledig toe te passen."
-  reboot_required=1
-fi
-
-if [[ "${reboot_required}" -eq 1 ]]; then
-  echo "Systeem wordt nu éénmalig herstart (na afronding van alle stappen)..."
-  reboot
-fi
+echo "Installatie succesvol afgerond. Systeem wordt nu automatisch herstart..."
+reboot
