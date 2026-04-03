@@ -53,8 +53,14 @@ if [[ "${ENABLED}" != "true" ]]; then
 fi
 
 while true; do
-  read -r -p "Wat is het interne IP adres van deze server? (10.0.0...): " INPUT_SERVER_IP
-  read -r -p "Voer het interne IP adres nogmaals in ter verificatie: " VERIFY_SERVER_IP
+  if [[ ! -r /dev/tty ]]; then
+    echo "[WG] FOUT: Geen interactieve TTY beschikbaar voor invoer." >&2
+    echo "[WG] Start de installatie opnieuw via SSH met een TTY (bijv. ssh -t)." >&2
+    exit 1
+  fi
+
+  read -r -p "Wat is het interne IP adres van deze server? (10.0.0...): " INPUT_SERVER_IP </dev/tty
+  read -r -p "Voer het interne IP adres nogmaals in ter verificatie: " VERIFY_SERVER_IP </dev/tty
 
   if [[ "${INPUT_SERVER_IP}" != "${VERIFY_SERVER_IP}" ]]; then
     echo "[WG] Invoer komt niet overeen. Probeer het opnieuw."
