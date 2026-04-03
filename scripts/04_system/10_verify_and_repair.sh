@@ -55,11 +55,15 @@ if ! iptables -C INPUT -p tcp --dport "${SSH_PORT}" -j ip >/dev/null 2>&1; then
   retry_script "scripts/03_firewall/07_configure_firewall.sh"
 fi
 
-if ! iptables -C INPUT -p udp --dport "${WIREGUARD_PORT}" -j ACCEPT >/dev/null 2>&1; then
+if ! iptables -C INPUT -p udp --dport "${WIREGUARD_PORT}" -j wireguard >/dev/null 2>&1; then
   retry_script "scripts/03_firewall/07_configure_firewall.sh"
 fi
 
 if ! iptables -C ip -s "${ALLOWED_IP_1}" -j ACCEPT >/dev/null 2>&1 || ! iptables -C ip -s "${ALLOWED_IP_2}" -j ACCEPT >/dev/null 2>&1 || ! iptables -C ip -j DROP >/dev/null 2>&1; then
+  retry_script "scripts/03_firewall/07_configure_firewall.sh"
+fi
+
+if ! iptables -C wireguard -j DROP >/dev/null 2>&1; then
   retry_script "scripts/03_firewall/07_configure_firewall.sh"
 fi
 

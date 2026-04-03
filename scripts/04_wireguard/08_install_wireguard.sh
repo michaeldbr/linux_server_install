@@ -90,8 +90,16 @@ if [[ "${FORWARDING}" == "true" ]]; then
 fi
 
 echo "[WG] Firewallregel voor UDP ${LISTEN_PORT} toevoegen..."
-iptables -C INPUT -p udp --dport "${LISTEN_PORT}" -j ACCEPT 2>/dev/null || \
-  iptables -A INPUT -p udp --dport "${LISTEN_PORT}" -j ACCEPT
+iptables -N wireguard 2>/dev/null || true
+iptables -F wireguard
+iptables -A wireguard -j DROP
+while iptables -C INPUT -p udp --dport "${LISTEN_PORT}" -j wireguard 2>/dev/null; do
+  iptables -D INPUT -p udp --dport "${LISTEN_PORT}" -j wireguard
+done
+while iptables -C INPUT -p udp --dport "${LISTEN_PORT}" -j ACCEPT 2>/dev/null; do
+  iptables -D INPUT -p udp --dport "${LISTEN_PORT}" -j ACCEPT
+done
+iptables -A INPUT -p udp --dport "${LISTEN_PORT}" -j wireguard
 iptables-save > /etc/iptables/rules.v4
 
 if [[ "${AUTO_START}" == "true" ]]; then
