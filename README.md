@@ -1,4 +1,4 @@
-# Server_install_Kubernet_node
+# LINUX_Server_install
 
 ## Installatiescript
 
