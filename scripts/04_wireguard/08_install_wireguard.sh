@@ -52,6 +52,27 @@ if [[ "${ENABLED}" != "true" ]]; then
   exit 0
 fi
 
+DEFAULT_SERVER_IP="${SERVER_IP%/*}"
+if [[ -z "${DEFAULT_SERVER_IP}" || "${DEFAULT_SERVER_IP}" == "${SERVER_IP}" ]]; then
+  DEFAULT_SERVER_IP="10.0.0.1"
+fi
+
+while true; do
+  read -r -p "Wat is het interne IP adres van deze server? (10.0.0...): " INPUT_SERVER_IP
+  INPUT_SERVER_IP="${INPUT_SERVER_IP:-${DEFAULT_SERVER_IP}}"
+
+  if [[ "${INPUT_SERVER_IP}" =~ ^10\.0\.0\.[0-9]{1,3}$ ]]; then
+    LAST_OCTET="${INPUT_SERVER_IP##*.}"
+    if (( LAST_OCTET >= 1 && LAST_OCTET <= 254 )); then
+      SERVER_IP="${INPUT_SERVER_IP}/24"
+      echo "[WG] Intern server IP ingesteld op ${SERVER_IP}"
+      break
+    fi
+  fi
+
+  echo "[WG] Ongeldig IP. Gebruik een adres zoals 10.0.0.2"
+done
+
 echo "[WG] WireGuard directory voorbereiden..."
 install -d -m 700 /etc/wireguard
 
