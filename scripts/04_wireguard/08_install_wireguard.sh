@@ -52,6 +52,38 @@ if [[ "${ENABLED}" != "true" ]]; then
   exit 0
 fi
 
+if [[ ! -r /dev/tty ]]; then
+  echo "[WG] FOUT: Geen interactieve terminal beschikbaar voor IP-invoer." >&2
+  echo "[WG] Start dit script in een interactieve SSH-sessie (met TTY)." >&2
+  exit 1
+fi
+
+while true; do
+  read -r -p "Wat is het interne IP adres van deze server? (10.0.0...): " INPUT_SERVER_IP < /dev/tty
+  read -r -p "Voer het interne IP adres nogmaals in ter verificatie: " VERIFY_SERVER_IP < /dev/tty
+
+  if [[ -z "${INPUT_SERVER_IP}" || -z "${VERIFY_SERVER_IP}" ]]; then
+    echo "[WG] Lege invoer is niet toegestaan. Probeer het opnieuw."
+    continue
+  fi
+
+  if [[ "${INPUT_SERVER_IP}" != "${VERIFY_SERVER_IP}" ]]; then
+    echo "[WG] Invoer komt niet overeen. Probeer het opnieuw."
+    continue
+  fi
+
+  if [[ "${INPUT_SERVER_IP}" =~ ^10\.0\.0\.[0-9]{1,3}$ ]]; then
+    LAST_OCTET="${INPUT_SERVER_IP##*.}"
+    if (( LAST_OCTET >= 1 && LAST_OCTET <= 254 )); then
+      SERVER_IP="${INPUT_SERVER_IP}/24"
+      echo "[WG] Intern server IP ingesteld op ${SERVER_IP}"
+      break
+    fi
+  fi
+
+  echo "[WG] Ongeldig IP. Gebruik een adres zoals 10.0.0.2"
+done
+
 echo "[WG] WireGuard directory voorbereiden..."
 install -d -m 700 /etc/wireguard
 
