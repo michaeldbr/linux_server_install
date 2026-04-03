@@ -82,14 +82,17 @@ done
 echo "[WG] WireGuard directory voorbereiden..."
 install -d -m 700 /etc/wireguard
 
-if [[ "${GENERATE_KEYS}" == "true" && ! -f "${PRIVATE_KEY_PATH}" ]]; then
+if [[ ! -f "${PRIVATE_KEY_PATH}" ]]; then
+  if [[ "${GENERATE_KEYS}" != "true" ]]; then
+    echo "[WG] Let op: key generatie stond uit, maar private key ontbreekt. Er wordt alsnog een key pair gemaakt."
+  fi
   echo "[WG] private key ontbreekt, genereren..."
   umask 077
   wg genkey > "${PRIVATE_KEY_PATH}"
 fi
 
 if [[ ! -f "${PUBLIC_KEY_PATH}" ]]; then
-  echo "[WG] public key genereren..."
+  echo "[WG] public key ontbreekt, genereren op basis van private key..."
   wg pubkey < "${PRIVATE_KEY_PATH}" > "${PUBLIC_KEY_PATH}"
 fi
 
