@@ -31,6 +31,15 @@ done
 iptables -A INPUT -p tcp --dport "${SSH_PORT}" -j ip
 
 iptables-save > /etc/iptables/rules.v4
+
+# Blokkeer al het IPv6-verkeer
+ip6tables -F
+ip6tables -X
+ip6tables -P INPUT DROP
+ip6tables -P FORWARD DROP
+ip6tables -P OUTPUT DROP
+ip6tables-save > /etc/iptables/rules.v6
+
 systemctl enable netfilter-persistent
 netfilter-persistent save
 netfilter-persistent reload
