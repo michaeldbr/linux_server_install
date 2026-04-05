@@ -26,13 +26,6 @@ curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/mai
 
 ```
 
-Of, rechtstreeks vanaf je eigen machine zonder eerst handmatig bestanden te kopiëren:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
-
-```
-
 Dit bootstrap-script verwijdert tijdelijke bestanden na afloop en verwijdert `git` weer als dat alleen voor de installatie is bijgeplaatst.
 
 ### Firewalllogica
