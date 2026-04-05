@@ -21,7 +21,8 @@ Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplits
 
 ### Gebruik
 
-Branch naar keuze (plak direct in SSH):
+```bash
+BRANCH='main'; curl -fsSL "https://raw.githubusercontent.com/michaeldbr/linux_server_install/${BRANCH}/scripts/00_common/remote_bootstrap.sh" | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH="${BRANCH}" bash
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/<jouw-branch>/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='<jouw-branch>' bash
@@ -30,7 +31,8 @@ curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/<jo
 Main branch (standaard):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
+BRANCH='main'; curl -fsSL "https://raw.githubusercontent.com/michaeldbr/linux_server_install/${BRANCH}/scripts/00_common/remote_bootstrap.sh" | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH="${BRANCH}" bash
+
 ```
 
 Dit bootstrap-script verwijdert tijdelijke bestanden na afloop en verwijdert `git` weer als dat alleen voor de installatie is bijgeplaatst.
@@ -86,6 +88,3 @@ PersistentKeepalive = 25
 ```bash
 sudo wg-quick down wg0 && sudo wg-quick up wg0
 ```
-
-
-test
