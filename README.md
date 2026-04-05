@@ -22,14 +22,14 @@ Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplits
 ### Gebruik
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
+BRANCH='main'; curl -fsSL "https://raw.githubusercontent.com/michaeldbr/linux_server_install/${BRANCH}/scripts/00_common/remote_bootstrap.sh" | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH="${BRANCH}" bash
 
 ```
 
 Of, rechtstreeks vanaf je eigen machine zonder eerst handmatig bestanden te kopiëren:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
+BRANCH='main'; curl -fsSL "https://raw.githubusercontent.com/michaeldbr/linux_server_install/${BRANCH}/scripts/00_common/remote_bootstrap.sh" | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH="${BRANCH}" bash
 
 ```
 
