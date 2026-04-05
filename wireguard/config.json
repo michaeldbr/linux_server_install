@@ -1,0 +1,56 @@
+{
+  "wireguard": {
+    "enabled": true,
+    "interface": "wg0",
+    "network": {
+      "subnet": "10.0.0.0/24",
+      "server_ip": "10.0.0.1/24",
+      "listen_port": 51820
+    },
+    "keys": {
+      "generate": true,
+      "private_key_path": "/etc/wireguard/private.key",
+      "public_key_path": "/etc/wireguard/public.key"
+    },
+    "firewall": {
+      "enable_nat": true,
+      "forwarding": true,
+      "iptables": {
+        "post_up": [
+          "iptables -A FORWARD -i wg0 -j ACCEPT",
+          "iptables -A FORWARD -o wg0 -j ACCEPT"
+        ],
+        "post_down": [
+          "iptables -D FORWARD -i wg0 -j ACCEPT",
+          "iptables -D FORWARD -o wg0 -j ACCEPT"
+        ]
+      }
+    },
+    "peers": [],
+    "auto_start": true
+  },
+  "provisioning": {
+    "mode": "dynamic",
+    "peer_registration": {
+      "enabled": true,
+      "endpoint": "https://your-api.local/wireguard/register",
+      "method": "POST",
+      "payload_template": {
+        "hostname": "{{HOSTNAME}}",
+        "public_key": "{{PUBLIC_KEY}}",
+        "internal_ip": "{{WG_IP}}"
+      }
+    },
+    "peer_sync": {
+      "enabled": true,
+      "endpoint": "https://your-api.local/wireguard/peers",
+      "interval_seconds": 60
+    }
+  },
+  "kubernetes": {
+    "enabled": true,
+    "use_wireguard_network": true,
+    "cluster_cidr": "10.244.0.0/16",
+    "service_cidr": "10.96.0.0/12"
+  }
+}
