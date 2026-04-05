@@ -21,16 +21,16 @@ Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplits
 
 ### Gebruik
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
+Branch naar keuze (plak direct in SSH):
 
+```bash
+curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/<jouw-branch>/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='<jouw-branch>' bash
 ```
 
-Of, rechtstreeks vanaf je eigen machine zonder eerst handmatig bestanden te kopiëren:
+Main branch (standaard):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
-
 ```
 
 Dit bootstrap-script verwijdert tijdelijke bestanden na afloop en verwijdert `git` weer als dat alleen voor de installatie is bijgeplaatst.
