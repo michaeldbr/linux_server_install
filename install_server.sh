@@ -19,7 +19,7 @@ bash "${SCRIPT_DIR}/scripts/01_system/01_system_update.sh"
 echo "[2/11] Tijd en datum synchroniseren + timezone Europe/Amsterdam instellen..."
 bash "${SCRIPT_DIR}/scripts/01_system/02_set_time_and_timezone.sh"
 
-echo "[3/11] Logging-retentie op maximaal 2 dagen zetten..."
+echo "[3/11] Alle logging-retentie op maximaal 2 dagen zetten..."
 bash "${SCRIPT_DIR}/scripts/01_system/03_configure_log_retention.sh"
 
 echo "[4/11] SSH pakketten installeren..."

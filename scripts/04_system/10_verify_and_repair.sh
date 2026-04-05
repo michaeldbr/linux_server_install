@@ -32,8 +32,16 @@ if [[ "$(timedatectl show -p Timezone --value 2>/dev/null || true)" != "Europe/A
   retry_script "scripts/01_system/02_set_time_and_timezone.sh"
 fi
 
-# 3) Logging-retentie
+# 3) Logging-retentie (journald + logrotate)
 if ! grep -qE '^\s*MaxRetentionSec=2day\b' /etc/systemd/journald.conf /etc/systemd/journald.conf.d/*.conf 2>/dev/null; then
+  retry_script "scripts/01_system/03_configure_log_retention.sh"
+fi
+
+if [[ -f /etc/logrotate.conf ]] && (! grep -qE '^\s*daily\b' /etc/logrotate.conf || ! grep -qE '^\s*rotate\s+2\b' /etc/logrotate.conf || ! grep -qE '^\s*maxage\s+2\b' /etc/logrotate.conf); then
+  retry_script "scripts/01_system/03_configure_log_retention.sh"
+fi
+
+if [[ -f /etc/logrotate.d/rsyslog ]] && (! grep -qE '^\s*daily\b' /etc/logrotate.d/rsyslog || ! grep -qE '^\s*rotate\s+2\b' /etc/logrotate.d/rsyslog || ! grep -qE '^\s*maxage\s+2\b' /etc/logrotate.d/rsyslog); then
   retry_script "scripts/01_system/03_configure_log_retention.sh"
 fi
 
