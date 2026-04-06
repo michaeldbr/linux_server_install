@@ -56,11 +56,11 @@ bash "${SCRIPT_DIR}/scripts/02_ssh/05_harden_ssh.sh"
 echo "[6/10] Firewall pakketten installeren..."
 bash "${SCRIPT_DIR}/scripts/03_firewall/06_install_firewall_packages.sh"
 
-echo "[7/10] Firewall regels met chain 'ip' instellen..."
-bash "${SCRIPT_DIR}/scripts/03_firewall/07_configure_firewall.sh"
-
-echo "[8/10] WireGuard installeren en configureren..."
+echo "[7/10] WireGuard installeren en configureren..."
 bash "${SCRIPT_DIR}/scripts/04_wireguard/08_install_wireguard.sh"
+
+echo "[8/10] Firewall regels instellen..."
+bash "${SCRIPT_DIR}/scripts/03_firewall/07_configure_firewall.sh"
 
 echo "[9/10] Controleren of alles goed is ingesteld (en zo nodig herstellen)..."
 bash "${SCRIPT_DIR}/scripts/04_system/10_verify_and_repair.sh"
