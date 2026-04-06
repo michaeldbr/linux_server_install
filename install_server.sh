@@ -36,19 +36,19 @@ check_base_phase() {
 }
 
 repair_base_phase() {
-  run_script "scripts/base/10_verify_and_repair.sh"
+  run_script "scripts/base/95_verify_repair.sh"
 }
 
 run_base_phase() {
-  run_script "scripts/base/01_system_update.sh"
-  run_script "scripts/base/02_set_time_and_timezone.sh"
-  run_script "scripts/base/03_install_ssh_packages.sh"
-  run_script "scripts/base/04_configure_michael_user.sh"
-  run_script "scripts/base/05_harden_ssh.sh"
-  run_script "scripts/base/06_install_firewall_packages.sh"
-  run_script "scripts/base/08_install_wireguard.sh"
-  run_script "scripts/base/07_configure_firewall.sh"
-  run_script "scripts/base/09_configure_logging.sh"
+  run_script "scripts/base/10_system_update.sh"
+  run_script "scripts/base/20_timezone.sh"
+  run_script "scripts/base/30_ssh_packages.sh"
+  run_script "scripts/base/40_user_setup.sh"
+  run_script "scripts/base/50_ssh_hardening.sh"
+  run_script "scripts/base/60_firewall_packages.sh"
+  run_script "scripts/base/70_wireguard.sh"
+  run_script "scripts/base/80_firewall_rules.sh"
+  run_script "scripts/base/90_logging.sh"
 }
 
 check_kubernetes_phase() {
@@ -65,16 +65,16 @@ check_kubernetes_phase() {
 }
 
 repair_kubernetes_phase() {
-  run_script "scripts/kubernetes/10_verify_and_repair.sh"
+  run_script "scripts/kubernetes/95_verify_repair.sh"
 }
 
 run_kubernetes_phase() {
-  run_script "scripts/kubernetes/01_install_containerd.sh"
-  run_script "scripts/kubernetes/02_kernel_network_settings.sh"
-  run_script "scripts/kubernetes/03_disable_swap.sh"
-  run_script "scripts/kubernetes/04_install_kubernetes_packages.sh"
-  run_script "scripts/kubernetes/05_configure_kubelet.sh"
-  run_script "scripts/kubernetes/06_install_crictl.sh"
+  run_script "scripts/kubernetes/10_containerd.sh"
+  run_script "scripts/kubernetes/20_kernel_network.sh"
+  run_script "scripts/kubernetes/30_swap.sh"
+  run_script "scripts/kubernetes/40_kube_packages.sh"
+  run_script "scripts/kubernetes/50_kubelet_config.sh"
+  run_script "scripts/kubernetes/60_crictl.sh"
 }
 
 run_role_phase() {
@@ -92,7 +92,7 @@ repair_role_phase() {
 }
 
 run_verify_phase() {
-  run_script "scripts/base/10_verify_and_repair.sh"
+  run_script "scripts/base/95_verify_repair.sh"
 }
 
 check_verify_phase() {
@@ -145,7 +145,7 @@ execute_phase "ROLE" run_role_phase check_role_phase repair_role_phase
 execute_phase "VERIFY" run_verify_phase check_verify_phase repair_verify_phase
 
 echo "[CLEANUP] Opschonen van ongebruikte pakketten..."
-run_script "scripts/base/11_cleanup.sh"
+run_script "scripts/base/99_cleanup.sh"
 
 echo "Klaar. SSH draait op poort ${SSH_PORT}. Tijdzone staat op Europe/Amsterdam."
 echo "Installatie succesvol afgerond. Systeem wordt nu automatisch herstart..."

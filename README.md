@@ -18,27 +18,27 @@ repo/
 ├── scripts/
 │   ├── base/
 │   │   ├── 00_input.sh
-│   │   ├── 01_system_update.sh
-│   │   ├── 02_set_time_and_timezone.sh
-│   │   ├── 03_install_ssh_packages.sh
-│   │   ├── 04_configure_michael_user.sh
-│   │   ├── 05_harden_ssh.sh
-│   │   ├── 06_install_firewall_packages.sh
-│   │   ├── 07_configure_firewall.sh
-│   │   ├── 08_install_wireguard.sh
-│   │   ├── 09_configure_logging.sh
-│   │   ├── 10_verify_and_repair.sh
-│   │   ├── 11_cleanup.sh
+│   │   ├── 10_system_update.sh
+│   │   ├── 20_timezone.sh
+│   │   ├── 30_ssh_packages.sh
+│   │   ├── 40_user_setup.sh
+│   │   ├── 50_ssh_hardening.sh
+│   │   ├── 60_firewall_packages.sh
+│   │   ├── 70_wireguard.sh
+│   │   ├── 80_firewall_rules.sh
+│   │   ├── 90_logging.sh
+│   │   ├── 95_verify_repair.sh
+│   │   ├── 99_cleanup.sh
 │   │   ├── common.sh
-│   │   └── remote_bootstrap.sh
+│   │   └── bootstrap.sh
 │   ├── kubernetes/
-│   │   ├── 01_install_containerd.sh
-│   │   ├── 02_kernel_network_settings.sh
-│   │   ├── 03_disable_swap.sh
-│   │   ├── 04_install_kubernetes_packages.sh
-│   │   ├── 05_configure_kubelet.sh
-│   │   ├── 06_install_crictl.sh
-│   │   └── 10_verify_and_repair.sh
+│   │   ├── 10_containerd.sh
+│   │   ├── 20_kernel_network.sh
+│   │   ├── 30_swap.sh
+│   │   ├── 40_kube_packages.sh
+│   │   ├── 50_kubelet_config.sh
+│   │   ├── 60_crictl.sh
+│   │   └── 95_verify_repair.sh
 │   ├── roles/
 │   │   ├── first-master.sh
 │   │   ├── master.sh
@@ -113,7 +113,7 @@ Doel: node voorbereiden zodat Kubernetes kan draaien (zonder cluster init/join t
 ### Gebruik
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/base/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
+curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/base/bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
 ```
 
 Backward-compatible bootstrap pad blijft ook beschikbaar:

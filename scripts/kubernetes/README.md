@@ -9,4 +9,4 @@ Deze laag bereidt een node voor op Kubernetes (zonder cluster init/join te start
 5. Kubelet runtime endpoint op containerd socket
 6. Optioneel `crictl`
 
-7. `10_verify_and_repair.sh` voor check + repair van Kubernetes-laag
+7. `95_verify_repair.sh` voor check + repair van Kubernetes-laag
