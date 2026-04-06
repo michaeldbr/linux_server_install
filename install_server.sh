@@ -23,13 +23,40 @@ validate_wireguard_ip() {
 
 echo "[PRE-FLIGHT] Benodigde invoer verzamelen..."
 
-# 🔥 FIX: detecteer interactieve vs niet-interactieve shell
+prompt_wireguard_ip_from_tty() {
+  local tty_fd
+  local candidate_ip
+  local confirm
+
+  if [[ ! -r /dev/tty || ! -w /dev/tty ]]; then
+    return 1
+  fi
+
+  exec {tty_fd}<>/dev/tty
+  while true; do
+    read -r -u "${tty_fd}" -p "Voer het WireGuard server IP in (bijv. 10.0.0.2): " candidate_ip
+
+    if ! validate_wireguard_ip "${candidate_ip}"; then
+      echo "[PRE-FLIGHT] Ongeldig IP. Gebruik formaat 10.0.0.X waarbij X tussen 1 en 254 ligt." >&"${tty_fd}"
+      continue
+    fi
+
+    read -r -u "${tty_fd}" -p "Bevestig IP '${candidate_ip}'? [j/N]: " confirm
+    case "${confirm,,}" in
+      j|ja|y|yes)
+        WIREGUARD_SERVER_IP="${candidate_ip}"
+        break
+        ;;
+      *)
+        echo "[PRE-FLIGHT] IP niet bevestigd, probeer opnieuw." >&"${tty_fd}"
+        ;;
+    esac
+  done
+  exec {tty_fd}>&-
+}
+
 if [[ -z "${WIREGUARD_SERVER_IP:-}" ]]; then
-  if [ -t 0 ]; then
-    # Interactief → vraag input
-    read -r -p "Voer het WireGuard server IP in (bijv. 10.0.0.2): " WIREGUARD_SERVER_IP
-  else
-    # Niet interactief → harde fout
+  if ! prompt_wireguard_ip_from_tty; then
     echo "[PRE-FLIGHT] FOUT: WIREGUARD_SERVER_IP is niet gezet en er is geen interactieve input mogelijk." >&2
     echo "[PRE-FLIGHT] Gebruik bijvoorbeeld:" >&2
     echo "WIREGUARD_SERVER_IP=10.0.0.X curl ... | bash" >&2
