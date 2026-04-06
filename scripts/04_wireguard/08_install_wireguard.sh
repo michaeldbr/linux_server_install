@@ -33,7 +33,6 @@ if not wg.get("enabled", False):
 
 print("ENABLED=true")
 print(f"INTERFACE={wg.get('interface', 'wg0')}")
-print(f"SERVER_IP={wg.get('network', {}).get('server_ip', '10.0.0.1/24')}")
 print(f"LISTEN_PORT={wg.get('network', {}).get('listen_port', 51820)}")
 print(f"PRIVATE_KEY_PATH={wg.get('keys', {}).get('private_key_path', '/etc/wireguard/private.key')}")
 print(f"PUBLIC_KEY_PATH={wg.get('keys', {}).get('public_key_path', '/etc/wireguard/public.key')}")
@@ -52,32 +51,22 @@ if [[ "${ENABLED}" != "true" ]]; then
   exit 0
 fi
 
-while true; do
-  if [[ ! -r /dev/tty ]]; then
-    echo "[WG] FOUT: Geen interactieve TTY beschikbaar voor invoer." >&2
-    echo "[WG] Start de installatie opnieuw via SSH met een TTY (bijv. ssh -t)." >&2
-    exit 1
-  fi
+SERVER_IP="${WIREGUARD_SERVER_IP:?ERROR: WIREGUARD_SERVER_IP not set}"
+if [[ ! "${SERVER_IP}" =~ ^10\.0\.0\.[0-9]{1,3}$ ]]; then
+  echo "[WG] FOUT: Ongeldig WIREGUARD_SERVER_IP '${SERVER_IP}'." >&2
+  echo "[WG] Gebruik formaat 10.0.0.X waarbij X tussen 1 en 254 ligt." >&2
+  exit 1
+fi
 
-  read -r -p "Wat is het interne IP adres van deze server? (10.0.0...): " INPUT_SERVER_IP </dev/tty
-  read -r -p "Voer het interne IP adres nogmaals in ter verificatie: " VERIFY_SERVER_IP </dev/tty
+LAST_OCTET="${SERVER_IP##*.}"
+if (( LAST_OCTET < 1 || LAST_OCTET > 254 )); then
+  echo "[WG] FOUT: Ongeldig WIREGUARD_SERVER_IP '${SERVER_IP}'." >&2
+  echo "[WG] Gebruik formaat 10.0.0.X waarbij X tussen 1 en 254 ligt." >&2
+  exit 1
+fi
 
-  if [[ "${INPUT_SERVER_IP}" != "${VERIFY_SERVER_IP}" ]]; then
-    echo "[WG] Invoer komt niet overeen. Probeer het opnieuw."
-    continue
-  fi
-
-  if [[ "${INPUT_SERVER_IP}" =~ ^10\.0\.0\.[0-9]{1,3}$ ]]; then
-    LAST_OCTET="${INPUT_SERVER_IP##*.}"
-    if (( LAST_OCTET >= 1 && LAST_OCTET <= 254 )); then
-      SERVER_IP="${INPUT_SERVER_IP}/24"
-      echo "[WG] Intern server IP ingesteld op ${SERVER_IP}"
-      break
-    fi
-  fi
-
-  echo "[WG] Ongeldig IP. Gebruik een adres zoals 10.0.0.2"
-done
+SERVER_IP_CIDR="${SERVER_IP}/24"
+echo "[WG] Intern server IP ingesteld op ${SERVER_IP_CIDR}"
 
 echo "[WG] WireGuard directory voorbereiden..."
 install -d -m 700 /etc/wireguard
@@ -105,7 +94,7 @@ echo "[WG] ${INTERFACE}.conf opbouwen..."
 {
   echo "[Interface]"
   echo "PrivateKey = $(cat "${PRIVATE_KEY_PATH}")"
-  echo "Address = ${SERVER_IP}"
+  echo "Address = ${SERVER_IP_CIDR}"
   echo "ListenPort = ${LISTEN_PORT}"
   echo "SaveConfig = true"
 } > "${WG_CONF_PATH}"
@@ -115,22 +104,14 @@ chmod 600 "${WG_CONF_PATH}"
 if [[ "${FORWARDING}" == "true" ]]; then
   echo "[WG] IP forwarding inschakelen..."
   sysctl -w net.ipv4.ip_forward=1 >/dev/null
-  sed -i '/net.ipv4.ip_forward/d' /etc/sysctl.conf
-  echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
-fi
 
-echo "[WG] Firewallregel voor UDP ${LISTEN_PORT} toevoegen..."
-iptables -N wireguard 2>/dev/null || true
-iptables -F wireguard
-iptables -A wireguard -j DROP
-while iptables -C INPUT -p udp --dport "${LISTEN_PORT}" -j wireguard 2>/dev/null; do
-  iptables -D INPUT -p udp --dport "${LISTEN_PORT}" -j wireguard
-done
-while iptables -C INPUT -p udp --dport "${LISTEN_PORT}" -j ACCEPT 2>/dev/null; do
-  iptables -D INPUT -p udp --dport "${LISTEN_PORT}" -j ACCEPT
-done
-iptables -A INPUT -p udp --dport "${LISTEN_PORT}" -j wireguard
-iptables-save > /etc/iptables/rules.v4
+  mkdir -p /etc/sysctl.d
+  cat > /etc/sysctl.d/99-wireguard-forwarding.conf <<EOF
+net.ipv4.ip_forward=1
+EOF
+
+  sysctl --system >/dev/null
+fi
 
 if [[ "${AUTO_START}" == "true" ]]; then
   echo "[WG] WireGuard service activeren..."
@@ -139,13 +120,11 @@ if [[ "${AUTO_START}" == "true" ]]; then
 fi
 
 echo "[WG] Validatie..."
-wg || true
-
-if ip a show "${INTERFACE}" >/dev/null 2>&1; then
-  echo "[WG] Interface ${INTERFACE} actief"
-else
+if ! ip a show "${INTERFACE}" >/dev/null 2>&1; then
   echo "[WG] FOUT: ${INTERFACE} interface niet actief" >&2
   exit 1
 fi
 
-echo "[WG] WireGuard succesvol actief op ${SERVER_IP}"
+wg || true
+
+echo "[WG] WireGuard succesvol actief op ${SERVER_IP_CIDR}"

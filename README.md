@@ -22,6 +22,13 @@ Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplits
 ### Gebruik
 
 ```bash
+WIREGUARD_SERVER_IP="10.0.0.1" \
+REPO_URL='https://github.com/michaeldbr/linux_server_install.git' \
+BRANCH='codex/refactor-linux-bootstrap-scripts-for-idempotency' \
+curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/codex/refactor-linux-bootstrap-scripts-for-idempotency/scripts/00_common/remote_bootstrap.sh | bash
+
+```
+```bash
 curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
 
 ```
