@@ -2,46 +2,127 @@
 
 ## Installatiescript
 
-Gebruik `install_server.sh` op een nieuwe Linux server. De werking is opgesplitst in mappen per programma/app en scripts met doorlopende nummering.
+Gebruik `install_server.sh` op een nieuwe Linux server. De installatie bestaat nu uit 3 lagen:
 
-### Scriptstructuur (volgorde van uitvoering)
+1. **Base** (altijd)
+2. **Kubernetes** (altijd, voorbereiden node)
+3. **Role** (selecteerbaar)
 
-- `scripts/00_common/common.sh` - gedeelde variabelen.
-- `scripts/00_common/remote_bootstrap.sh` - bootstrap voor remote installatie via 1 SSH-commando (download/run/cleanup).
-- `scripts/01_system/01_system_update.sh` - systeemupdate.
-- `scripts/01_system/02_set_time_and_timezone.sh` - tijd/datum synchronisatie en timezone op `Europe/Amsterdam`.
-- `scripts/02_ssh/03_install_ssh_packages.sh` - installatie SSH/sudo.
-- `scripts/02_ssh/04_configure_michael_user.sh` - user `michael` + SSH key + sudoers.
-- `scripts/02_ssh/05_harden_ssh.sh` - root login uit + SSH op poort `40111`.
-- `scripts/03_firewall/06_install_firewall_packages.sh` - installatie firewall pakketten.
-- `scripts/03_firewall/07_configure_firewall.sh` - chain `ip`, INPUT forwarding regel voor SSH poort `40111` (TCP), opent WireGuard UDP poort `51820`, boot-activatie en apply.
-- `scripts/03_firewall/09_install_wireguard.sh` - installatie van WireGuard.
-- `scripts/04_system/10_verify_and_repair.sh` - controleert of alles correct is geïnstalleerd/geconfigureerd en probeert mislukte onderdelen gericht opnieuw.
-- `scripts/04_system/11_cleanup.sh` - cleanup.
+De basisconfiguratie (SSH, firewall, WireGuard, logging) blijft gelijk, maar er is nu een extra Kubernetes-laag tussen base en role.
+
+### Nieuwe scriptstructuur
+
+```text
+repo/
+├── install_server.sh
+├── scripts/
+│   ├── base/
+│   │   ├── 00_input.sh
+│   │   ├── 01_system_update.sh
+│   │   ├── 02_set_time_and_timezone.sh
+│   │   ├── 03_install_ssh_packages.sh
+│   │   ├── 04_configure_michael_user.sh
+│   │   ├── 05_harden_ssh.sh
+│   │   ├── 06_install_firewall_packages.sh
+│   │   ├── 07_configure_firewall.sh
+│   │   ├── 08_install_wireguard.sh
+│   │   ├── 09_configure_logging.sh
+│   │   ├── 10_verify_and_repair.sh
+│   │   ├── 11_cleanup.sh
+│   │   ├── common.sh
+│   │   └── remote_bootstrap.sh
+│   ├── kubernetes/
+│   │   ├── 01_install_containerd.sh
+│   │   ├── 02_kernel_network_settings.sh
+│   │   ├── 03_disable_swap.sh
+│   │   ├── 04_install_kubernetes_packages.sh
+│   │   ├── 05_configure_kubelet.sh
+│   │   ├── 06_install_crictl.sh
+│   │   └── 10_verify_and_repair.sh
+│   ├── roles/
+│   │   ├── first-master.sh
+│   │   ├── master.sh
+│   │   ├── worker.sh
+│   │   └── traffic.sh
+│   └── services/
+├── templates/
+└── wireguard/
+    └── config.json
+```
+
+### Input tijdens installatie
+
+`install_server.sh` vraagt interactief (via `/dev/tty`) en altijd met dubbele bevestiging:
+
+1. Intern IP (`10.0.0.X`)
+2. Rol (`first-master`, `master`, `worker`, `traffic`)
+3. Hostname
+
+Als de twee antwoorden per vraag niet gelijk zijn, wordt die specifieke vraag opnieuw gesteld.
+
+
+### Fase-gebaseerde execution (check + retry + repair / controlled fail)
+
+De installer draait nu per fase:
+
+1. `BASE`
+2. `KUBERNETES`
+3. `ROLE`
+4. `VERIFY`
+
+Per fase gebeurt:
+- uitvoering (`run`)
+- directe controle (`check`)
+- bij mislukking: herstel (`repair`) en opnieuw checken
+- maximaal `MAX_PHASE_ATTEMPTS` pogingen (default: `2`)
+- als de fase daarna nog faalt: **gecontroleerde stop** (`controlled fail`) met duidelijke foutmelding
+
+Je kunt aantal pogingen aanpassen via bijvoorbeeld:
+
+```bash
+MAX_PHASE_ATTEMPTS=3 bash ./install_server.sh
+```
+
+### Kubernetes-laag (tussen base en role)
+
+Doel: node voorbereiden zodat Kubernetes kan draaien (zonder cluster init/join te starten).
+
+- Runtime & tools:
+  - containerd installeren + configureren
+  - kubeadm installeren
+  - kubelet installeren
+  - kubectl installeren
+- Containerd config:
+  - `SystemdCgroup = true`
+  - socket: `/run/containerd/containerd.sock`
+- Kernel & network settings:
+  - modules: `overlay`, `br_netfilter`
+  - sysctl: `net.bridge.bridge-nf-call-iptables=1`, `net.ipv4.ip_forward=1`
+- Swap uit:
+  - `swapoff -a`
+  - swap entries uit `/etc/fstab`
+- Kubelet basisconfig:
+  - runtime endpoint op containerd socket
+  - service `enable`
+- Debug tools:
+  - `crictl` (optioneel, indien package beschikbaar)
+- Repositories/packages:
+  - Kubernetes apt repo toevoegen
+  - `kubelet`, `kubeadm`, `kubectl` installeren en op hold zetten
 
 ### Gebruik
 
 ```bash
-WIREGUARD_SERVER_IP="10.0.0.1" \
-REPO_URL='https://github.com/michaeldbr/linux_server_install.git' \
-BRANCH='codex/refactor-linux-bootstrap-scripts-for-idempotency' \
-curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/codex/refactor-linux-bootstrap-scripts-for-idempotency/scripts/00_common/remote_bootstrap.sh | bash
-
+curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/base/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
 ```
+
+Backward-compatible bootstrap pad blijft ook beschikbaar:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/main/scripts/00_common/remote_bootstrap.sh | REPO_URL='https://github.com/michaeldbr/linux_server_install.git' BRANCH='main' bash
-
 ```
 
-Dit bootstrap-script verwijdert tijdelijke bestanden na afloop en verwijdert `git` weer als dat alleen voor de installatie is bijgeplaatst.
+### Logging
 
-### Firewalllogica
-
-- Chain `ip`:
-  - `ACCEPT` als source `188.207.111.246`
-  - `ACCEPT` als source `145.53.102.212`
-  - anders `DROP`
-- In `INPUT` wordt SSH verkeer op poort `40111` (TCP) doorgestuurd naar chain `ip`.
-- In `INPUT` wordt WireGuard verkeer op poort `51820` (UDP) doorgestuurd naar chain `wireguard`.
-- Chain `wireguard` bevat als eerste regel `DROP`.
-- Na configuratie wordt netfilter-persistent op boot geactiveerd (`enable`) en de config direct toegepast (`save` + `reload`).
+- In de basisinstallatie wordt `systemd-journald` geconfigureerd met `MaxRetentionSec=2day`.
+- Logs worden daarmee maximaal 2 dagen bewaard.
