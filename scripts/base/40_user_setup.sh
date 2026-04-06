@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=scripts/00_common/common.sh
-source "${SCRIPT_DIR}/../00_common/common.sh"
+# shellcheck source=scripts/base/common.sh
+source "${SCRIPT_DIR}/common.sh"
 
 echo "[USER] Controleren of gebruiker '${MICHAEL_USER}' bestaat..."
 if ! id -u "${MICHAEL_USER}" >/dev/null 2>&1; then
