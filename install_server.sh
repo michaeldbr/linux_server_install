@@ -26,7 +26,7 @@ echo "[PRE-FLIGHT] Benodigde invoer verzamelen..."
 prompt_wireguard_ip_from_tty() {
   local tty_fd
   local candidate_ip
-  local confirm
+  local confirm_ip
 
   if [[ ! -r /dev/tty || ! -w /dev/tty ]]; then
     return 1
@@ -41,16 +41,14 @@ prompt_wireguard_ip_from_tty() {
       continue
     fi
 
-    read -r -u "${tty_fd}" -p "Bevestig IP '${candidate_ip}'? [j/N]: " confirm
-    case "${confirm,,}" in
-      j|ja|y|yes)
-        WIREGUARD_SERVER_IP="${candidate_ip}"
-        break
-        ;;
-      *)
-        echo "[PRE-FLIGHT] IP niet bevestigd, probeer opnieuw." >&"${tty_fd}"
-        ;;
-    esac
+    read -r -u "${tty_fd}" -p "Voer hetzelfde IP opnieuw in ter bevestiging: " confirm_ip
+    if [[ "${confirm_ip}" != "${candidate_ip}" ]]; then
+      echo "[PRE-FLIGHT] IP-adressen komen niet overeen, probeer opnieuw." >&"${tty_fd}"
+      continue
+    fi
+
+    WIREGUARD_SERVER_IP="${candidate_ip}"
+    break
   done
   exec {tty_fd}>&-
 }
