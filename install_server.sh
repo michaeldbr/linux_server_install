@@ -22,8 +22,19 @@ validate_wireguard_ip() {
 }
 
 echo "[PRE-FLIGHT] Benodigde invoer verzamelen..."
+
+# 🔥 FIX: detecteer interactieve vs niet-interactieve shell
 if [[ -z "${WIREGUARD_SERVER_IP:-}" ]]; then
-  read -r -p "Voer het WireGuard server IP in (bijv. 10.0.0.2): " WIREGUARD_SERVER_IP
+  if [ -t 0 ]; then
+    # Interactief → vraag input
+    read -r -p "Voer het WireGuard server IP in (bijv. 10.0.0.2): " WIREGUARD_SERVER_IP
+  else
+    # Niet interactief → harde fout
+    echo "[PRE-FLIGHT] FOUT: WIREGUARD_SERVER_IP is niet gezet en er is geen interactieve input mogelijk." >&2
+    echo "[PRE-FLIGHT] Gebruik bijvoorbeeld:" >&2
+    echo "WIREGUARD_SERVER_IP=10.0.0.X curl ... | bash" >&2
+    exit 1
+  fi
 fi
 
 if ! validate_wireguard_ip "${WIREGUARD_SERVER_IP}"; then
