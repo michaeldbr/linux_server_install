@@ -75,6 +75,7 @@ run_kubernetes_phase() {
   run_script "scripts/kubernetes/40_kube_packages.sh"
   run_script "scripts/kubernetes/50_kubelet_config.sh"
   run_script "scripts/kubernetes/60_crictl.sh"
+  run_script "scripts/kubernetes/70_cni.sh"
 }
 
 run_role_phase() {
