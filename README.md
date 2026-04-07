@@ -141,3 +141,40 @@ curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/mai
 
 - In de basisinstallatie wordt `systemd-journald` geconfigureerd met `MaxRetentionSec=2day`.
 - Logs worden daarmee maximaal 2 dagen bewaard.
+
+### Twee masters koppelen (first-master + master)
+
+De install scripts bereiden nodes voor, maar starten cluster init/join niet automatisch.
+Gebruik na installatie:
+
+1. Op **first-master**:
+
+```bash
+sudo kubeadm init --control-plane-endpoint "<VIP_OF_LB>:6443" --upload-certs --pod-network-cidr=10.244.0.0/16
+```
+
+2. Op **first-master**, CNI toepassen (default flannel):
+
+```bash
+sudo CNI_PLUGIN=flannel bash scripts/kubernetes/70_cni.sh
+```
+
+3. Op **first-master**, join info ophalen:
+
+```bash
+kubeadm token create --print-join-command
+kubeadm init phase upload-certs --upload-certs
+```
+
+4. Op **tweede master**:
+
+```bash
+sudo kubeadm join <VIP_OF_LB>:6443 --token <TOKEN> --discovery-token-ca-cert-hash sha256:<HASH> --control-plane --certificate-key <CERT_KEY>
+```
+
+5. Controleren op first-master:
+
+```bash
+kubectl get nodes -o wide
+kubectl get pods -A
+```
