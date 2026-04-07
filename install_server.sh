@@ -78,7 +78,7 @@ run_kubernetes_phase() {
 }
 
 run_role_phase() {
-  run_script "scripts/roles/${SERVER_ROLE}.sh"
+  run_script "scripts/roles/${SERVER_ROLE}/apply.sh"
 }
 
 check_role_phase() {
