@@ -24,6 +24,7 @@ iptables -P OUTPUT ACCEPT
 iptables -N INPUT_BASE
 iptables -N INPUT_SSH
 iptables -N INPUT_WG
+iptables -N INPUT_ROLE
 iptables -N LOG_ACCEPT
 iptables -N LOG_DROP
 
@@ -48,6 +49,9 @@ iptables -A INPUT_BASE -p udp --dport "${WIREGUARD_PORT}" -j INPUT_WG
 # Optioneel: ping toestaan
 iptables -A INPUT_BASE -p icmp --icmp-type echo-request -j ACCEPT
 
+# Rol-specifieke firewallregels via INPUT_ROLE chain
+iptables -A INPUT_BASE -j INPUT_ROLE
+
 # Alles wat overblijft loggen en droppen
 iptables -A INPUT_BASE -j LOG_DROP
 
@@ -59,6 +63,9 @@ iptables -A INPUT_SSH -j LOG_DROP
 # WireGuard poort openzetten
 # Let op: hier niet op source-IP filteren, omdat peers/providers kunnen wisselen.
 iptables -A INPUT_WG -j ACCEPT
+
+# INPUT_ROLE is bewust leeg in de base en wordt per rol gevuld.
+iptables -A INPUT_ROLE -j RETURN
 
 # Persist opslaan
 iptables-save > /etc/iptables/rules.v4

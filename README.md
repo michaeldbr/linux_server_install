@@ -40,15 +40,30 @@ repo/
 │   │   ├── 60_crictl.sh
 │   │   └── 95_verify_repair.sh
 │   ├── roles/
-│   │   ├── first-master.sh
-│   │   ├── master.sh
-│   │   ├── worker.sh
-│   │   └── traffic.sh
+│   │   ├── first-master/
+│   │   │   ├── apply.sh
+│   │   │   └── firewall.sh
+│   │   ├── master/
+│   │   │   ├── apply.sh
+│   │   │   └── firewall.sh
+│   │   ├── worker/
+│   │   │   ├── apply.sh
+│   │   │   └── firewall.sh
+│   │   └── traffic/
+│   │       ├── apply.sh
+│   │       └── firewall.sh
 │   └── services/
 ├── templates/
 └── wireguard/
     └── config.json
 ```
+
+### Firewall-opbouw: basis + rol-specifiek
+
+- `scripts/base/80_firewall_rules.sh` bevat alleen de algemene regels die voor elke server gelden.
+- De base maakt een lege chain `INPUT_ROLE` aan.
+- Per rol wordt daarna `scripts/roles/<rol>/firewall.sh` uitgevoerd om alleen rol-specifieke poorten toe te voegen.
+- Zo blijven gedeelde regels centraal en staan uitzonderingen bij de juiste rol.
 
 ### Input tijdens installatie
 
