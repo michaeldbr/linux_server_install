@@ -172,6 +172,12 @@ Onderstaand voorbeeld gaat uit van:
 - Interface: `wg0`
 - Poort: `51820/udp`
 
+Je kunt de WireGuard-config openen en aanpassen met:
+
+```bash
+sudo nano /etc/wireguard/wg0.conf
+```
+
 1. **Controleer op beide servers of WireGuard draait en het lokale adres klopt**
 
 ```bash

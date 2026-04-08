@@ -66,6 +66,7 @@ if (( LAST_OCTET < 1 || LAST_OCTET > 254 )); then
 fi
 
 IPVANSERVER="${SERVER_IP}"
+IPVANSERVER_CIDR="${IPVANSERVER}/24"
 echo "[WG] Intern server IP ingesteld op ${IPVANSERVER}"
 
 echo "[WG] WireGuard directory voorbereiden..."
@@ -94,56 +95,8 @@ echo "[WG] ${INTERFACE}.conf opbouwen..."
 {
   echo "[Interface]"
   echo "PrivateKey = $(cat "${PRIVATE_KEY_PATH}")"
-  echo "Address = ${IPVANSERVER}"
+  echo "Address = ${IPVANSERVER_CIDR}"
   echo "ListenPort = 51820"
-  echo
-  echo "[Peer]"
-  echo "PublicKey = "
-  echo "Endpoint = 217.160.188.152:51820"
-  echo "AllowedIPs = 10.0.0.2/32"
-  echo "PersistentKeepalive = 25"
-  echo
-  echo "[Peer]"
-  echo "PublicKey = "
-  echo "Endpoint = :51820"
-  echo "AllowedIPs = 10.0.0.3/32"
-  echo "PersistentKeepalive = 25"
-  echo
-  echo "[Peer]"
-  echo "PublicKey = "
-  echo "Endpoint = :51820"
-  echo "AllowedIPs = 10.0.0.4/32"
-  echo "PersistentKeepalive = 25"
-  echo
-  echo "[Peer]"
-  echo "PublicKey = "
-  echo "Endpoint = :51820"
-  echo "AllowedIPs = 10.0.0.5/32"
-  echo "PersistentKeepalive = 25"
-  echo
-  echo "[Peer]"
-  echo "PublicKey = "
-  echo "Endpoint = :51820"
-  echo "AllowedIPs = 10.0.0.6/32"
-  echo "PersistentKeepalive = 25"
-  echo
-  echo "[Peer]"
-  echo "PublicKey = "
-  echo "Endpoint = :51820"
-  echo "AllowedIPs = 10.0.0.7/32"
-  echo "PersistentKeepalive = 25"
-  echo
-  echo "[Peer]"
-  echo "PublicKey = "
-  echo "Endpoint = :51820"
-  echo "AllowedIPs = 10.0.0.8/32"
-  echo "PersistentKeepalive = 25"
-  echo
-  echo "[Peer]"
-  echo "PublicKey = "
-  echo "Endpoint = :51820"
-  echo "AllowedIPs = 10.0.0.9/32"
-  echo "PersistentKeepalive = 25"
 } > "${WG_CONF_PATH}"
 
 chmod 600 "${WG_CONF_PATH}"
