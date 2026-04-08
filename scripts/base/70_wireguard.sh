@@ -96,7 +96,6 @@ echo "[WG] ${INTERFACE}.conf opbouwen..."
   echo "PrivateKey = $(cat "${PRIVATE_KEY_PATH}")"
   echo "Address = ${SERVER_IP_CIDR}"
   echo "ListenPort = ${LISTEN_PORT}"
-  echo "SaveConfig = true"
 } > "${WG_CONF_PATH}"
 
 chmod 600 "${WG_CONF_PATH}"

@@ -229,7 +229,6 @@ PrivateKey = <PRIVATE_KEY_VAN_DEZE_SERVER>
 # PublicKey = <PUBLIC_KEY_VAN_DEZE_SERVER>
 Address = 10.0.0.2/24
 ListenPort = 51820
-SaveConfig = true
 ```
 
 Sleutels genereren (indien nodig) en in bestanden wegschrijven:
@@ -238,7 +237,7 @@ Sleutels genereren (indien nodig) en in bestanden wegschrijven:
 sudo bash -c 'umask 077; [[ -f /etc/wireguard/private.key ]] || wg genkey > /etc/wireguard/private.key; wg pubkey < /etc/wireguard/private.key > /etc/wireguard/public.key'
 ```
 
-8. **Herlaad WireGuard en maak actieve peers persistent**
+8. **Herlaad WireGuard-config**
 
 ```bash
 sudo systemctl restart wg-quick@wg0
