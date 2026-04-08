@@ -5,6 +5,7 @@ echo "[FIREWALL:master] Rol-specifieke firewallregels toepassen..."
 
 iptables -F INPUT_ROLE
 iptables -A INPUT_ROLE -p tcp --dport 6443 -j LOG_ACCEPT
+iptables -A INPUT_ROLE -p tcp --dport 7443 -j LOG_ACCEPT
 iptables -A INPUT_ROLE -p tcp --dport 2379:2380 -j LOG_ACCEPT
 iptables -A INPUT_ROLE -p tcp --dport 10250 -j LOG_ACCEPT
 iptables -A INPUT_ROLE -p tcp --dport 10257 -j LOG_ACCEPT
