@@ -270,10 +270,25 @@ Je ziet dan o.a. `latest handshake` en oplopende `transfer` counters. Als die on
 De rol `first-master` en `master` installeren automatisch `keepalived` en `haproxy`, schrijven direct werkende configuraties weg (`/etc/keepalived/keepalived.conf` en `/etc/haproxy/haproxy.cfg`) en starten/enable'n beide services meteen.
 Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-plane-endpoint`:
 
-- `first-master`: endpoint = eigen server-IP (`WIREGUARD_SERVER_IP`)
+- `first-master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
 - `master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
 
 - HAProxy backend defaults: `10.0.0.1:6443` t/m `10.0.0.9:6443` (optioneel te overschrijven met `CONTROL_PLANE_BACKENDS`, comma-separated)
+
+> ⚠️ **Belangrijk voor een werkende HA-opzet**
+>
+> Gebruik op **beide** masters altijd exact hetzelfde endpoint (standaard `10.0.0.100`) én stel unicast peers expliciet in. Voorbeeld:
+>
+> ```bash
+> # first-master
+> CONTROL_PLANE_ENDPOINT=10.0.0.100 KEEPALIVED_UNICAST_SRC_IP=10.0.0.1 KEEPALIVED_UNICAST_PEERS=10.0.0.2 bash scripts/roles/first-master/apply.sh
+>
+> # tweede master
+> CONTROL_PLANE_ENDPOINT=10.0.0.100 KEEPALIVED_UNICAST_SRC_IP=10.0.0.2 KEEPALIVED_UNICAST_PEERS=10.0.0.1 bash scripts/roles/master/apply.sh
+> ```
+>
+> Let op de LB-poort: HAProxy bindt hier bewust op `7443` om poortconflict met lokale kube-apiserver (`6443`) op master nodes te vermijden.
+> Gebruik daarom kubeadm/join tegen `<VIP>:7443`.
 
 De install scripts bereiden nodes voor, maar starten cluster init/join niet automatisch.
 Gebruik na installatie:
@@ -281,7 +296,7 @@ Gebruik na installatie:
 1. Op **first-master**:
 
 ```bash
-sudo kubeadm init --control-plane-endpoint "<VIP_OF_LB>:6443" --upload-certs --pod-network-cidr=10.244.0.0/16
+sudo kubeadm init --control-plane-endpoint "<VIP_OF_LB>:7443" --upload-certs --pod-network-cidr=10.244.0.0/16
 ```
 
 2. Op **first-master**, CNI toepassen (default flannel):
@@ -300,7 +315,7 @@ kubeadm init phase upload-certs --upload-certs
 4. Op **tweede master**:
 
 ```bash
-sudo kubeadm join <VIP_OF_LB>:6443 --token <TOKEN> --discovery-token-ca-cert-hash sha256:<HASH> --control-plane --certificate-key <CERT_KEY>
+sudo kubeadm join <VIP_OF_LB>:7443 --token <TOKEN> --discovery-token-ca-cert-hash sha256:<HASH> --control-plane --certificate-key <CERT_KEY>
 ```
 
 5. Controleren op first-master:

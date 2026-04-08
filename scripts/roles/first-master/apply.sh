@@ -4,10 +4,10 @@ set -euo pipefail
 ROLE_NAME="first-master"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-CONTROL_PLANE_ENDPOINT="${WIREGUARD_SERVER_IP}"
+CONTROL_PLANE_ENDPOINT="${CONTROL_PLANE_ENDPOINT:-10.0.0.100}"
 
 if [[ -z "${CONTROL_PLANE_ENDPOINT:-}" ]]; then
-  echo "[ROLE:${ROLE_NAME}] FOUT: WIREGUARD_SERVER_IP is niet gezet." >&2
+  echo "[ROLE:${ROLE_NAME}] FOUT: CONTROL_PLANE_ENDPOINT is niet gezet." >&2
   exit 1
 fi
 

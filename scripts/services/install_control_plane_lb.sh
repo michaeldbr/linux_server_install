@@ -21,13 +21,22 @@ if ! command -v ip >/dev/null 2>&1; then
   exit 1
 fi
 
-KEEPALIVED_INTERFACE="${KEEPALIVED_INTERFACE:-$(ip route get "${CONTROL_PLANE_ENDPOINT}" 2>/dev/null | awk '/dev/ {for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}')}"
-if [[ -z "${KEEPALIVED_INTERFACE}" ]]; then
-  KEEPALIVED_INTERFACE="$(ip route show default 2>/dev/null | awk '/default/ {for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}')"
+KEEPALIVED_INTERFACE="${KEEPALIVED_INTERFACE:-}"
+
+if [[ -z "${KEEPALIVED_INTERFACE}" ]] && ip link show wg0 >/dev/null 2>&1; then
+  KEEPALIVED_INTERFACE="wg0"
 fi
 
 if [[ -z "${KEEPALIVED_INTERFACE}" ]]; then
-  echo "[SERVICES:${ROLE_NAME}] FOUT: kon netwerkinterface voor keepalived niet bepalen." >&2
+  KEEPALIVED_INTERFACE="$(ip route get "${CONTROL_PLANE_ENDPOINT}" 2>/dev/null | awk '/dev/ {for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}')"
+fi
+
+if [[ -z "${KEEPALIVED_INTERFACE}" || "${KEEPALIVED_INTERFACE}" == "lo" ]]; then
+  KEEPALIVED_INTERFACE="$(ip route show default 2>/dev/null | awk '/default/ {for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}')"
+fi
+
+if [[ -z "${KEEPALIVED_INTERFACE}" || "${KEEPALIVED_INTERFACE}" == "lo" ]]; then
+  echo "[SERVICES:${ROLE_NAME}] FOUT: kon netwerkinterface voor keepalived niet bepalen (of detecteerde alleen lo)." >&2
   exit 1
 fi
 
