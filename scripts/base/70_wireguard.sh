@@ -65,8 +65,8 @@ if (( LAST_OCTET < 1 || LAST_OCTET > 254 )); then
   exit 1
 fi
 
-SERVER_IP_CIDR="${SERVER_IP}/24"
-echo "[WG] Intern server IP ingesteld op ${SERVER_IP_CIDR}"
+IPVANSERVER="${SERVER_IP}"
+echo "[WG] Intern server IP ingesteld op ${IPVANSERVER}"
 
 echo "[WG] WireGuard directory voorbereiden..."
 install -d -m 700 /etc/wireguard
@@ -94,8 +94,56 @@ echo "[WG] ${INTERFACE}.conf opbouwen..."
 {
   echo "[Interface]"
   echo "PrivateKey = $(cat "${PRIVATE_KEY_PATH}")"
-  echo "Address = ${SERVER_IP_CIDR}"
-  echo "ListenPort = ${LISTEN_PORT}"
+  echo "Address = ${IPVANSERVER}"
+  echo "ListenPort = 51820"
+  echo
+  echo "[Peer]"
+  echo "PublicKey = "
+  echo "Endpoint = 217.160.188.152:51820"
+  echo "AllowedIPs = 10.0.0.2/32"
+  echo "PersistentKeepalive = 25"
+  echo
+  echo "[Peer]"
+  echo "PublicKey = "
+  echo "Endpoint = :51820"
+  echo "AllowedIPs = 10.0.0.3/32"
+  echo "PersistentKeepalive = 25"
+  echo
+  echo "[Peer]"
+  echo "PublicKey = "
+  echo "Endpoint = :51820"
+  echo "AllowedIPs = 10.0.0.4/32"
+  echo "PersistentKeepalive = 25"
+  echo
+  echo "[Peer]"
+  echo "PublicKey = "
+  echo "Endpoint = :51820"
+  echo "AllowedIPs = 10.0.0.5/32"
+  echo "PersistentKeepalive = 25"
+  echo
+  echo "[Peer]"
+  echo "PublicKey = "
+  echo "Endpoint = :51820"
+  echo "AllowedIPs = 10.0.0.6/32"
+  echo "PersistentKeepalive = 25"
+  echo
+  echo "[Peer]"
+  echo "PublicKey = "
+  echo "Endpoint = :51820"
+  echo "AllowedIPs = 10.0.0.7/32"
+  echo "PersistentKeepalive = 25"
+  echo
+  echo "[Peer]"
+  echo "PublicKey = "
+  echo "Endpoint = :51820"
+  echo "AllowedIPs = 10.0.0.8/32"
+  echo "PersistentKeepalive = 25"
+  echo
+  echo "[Peer]"
+  echo "PublicKey = "
+  echo "Endpoint = :51820"
+  echo "AllowedIPs = 10.0.0.9/32"
+  echo "PersistentKeepalive = 25"
 } > "${WG_CONF_PATH}"
 
 chmod 600 "${WG_CONF_PATH}"
@@ -126,4 +174,4 @@ fi
 
 wg || true
 
-echo "[WG] WireGuard succesvol actief op ${SERVER_IP_CIDR}"
+echo "[WG] WireGuard succesvol actief op ${IPVANSERVER}"
