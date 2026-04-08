@@ -125,6 +125,22 @@ Doel: node voorbereiden zodat Kubernetes kan draaien (zonder cluster init/join t
   - Kubernetes apt repo toevoegen
   - `kubelet`, `kubeadm`, `kubectl` installeren en op hold zetten
 
+### Control-plane endpoint service (keepalived + haproxy)
+
+Voor rollen `first-master` en `master` wordt `scripts/services/install_control_plane_lb.sh` aangeroepen.
+
+- Standaard endpoint: `CONTROL_PLANE_ENDPOINT=10.0.0.100`
+- Standaard HAProxy bindpoort: `HAPROXY_BIND_PORT=7443`
+- `KEEPALIVED_UNICAST_SRC_IP` default:
+  - op basis van `WIREGUARD_SERVER_IP` (als gezet)
+  - anders fallback naar `10.0.0.1` (`first-master`) of `10.0.0.2` (`master`)
+- `CONTROL_PLANE_BACKENDS` default:
+  - automatisch `${KEEPALIVED_UNICAST_SRC_IP},${KEEPALIVED_UNICAST_PEERS}`
+  - dus standaard alleen de twee masters i.p.v. een brede lijst
+
+Aanbevolen in productie: zet `CONTROL_PLANE_ENDPOINT`, `KEEPALIVED_UNICAST_SRC_IP`,
+`KEEPALIVED_UNICAST_PEERS` en `CONTROL_PLANE_BACKENDS` expliciet zodat ze exact bij je netwerk passen.
+
 ### Gebruik
 
 ```bash
