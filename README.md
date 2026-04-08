@@ -144,11 +144,13 @@ curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/mai
 
 ### Twee masters koppelen (first-master + master)
 
-De rol `first-master` en `master` installeren automatisch `keepalived` en `haproxy`.
+De rol `first-master` en `master` installeren automatisch `keepalived` en `haproxy`, schrijven direct werkende configuraties weg (`/etc/keepalived/keepalived.conf` en `/etc/haproxy/haproxy.cfg`) en starten/enable'n beide services meteen.
 Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-plane-endpoint`:
 
 - `first-master`: endpoint = eigen server-IP (`WIREGUARD_SERVER_IP`)
 - `master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
+
+- HAProxy backend defaults: `10.0.0.1:6443` t/m `10.0.0.9:6443` (optioneel te overschrijven met `CONTROL_PLANE_BACKENDS`, comma-separated)
 
 De install scripts bereiden nodes voor, maar starten cluster init/join niet automatisch.
 Gebruik na installatie:
