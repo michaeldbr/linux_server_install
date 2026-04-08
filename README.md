@@ -263,6 +263,63 @@ sudo bash -c 'umask 077; [[ -f /etc/wireguard/private.key ]] || wg genkey > /etc
 sudo systemctl restart wg-quick@wg0
 ```
 
+### WireGuard voorbeeldconfig (copy/paste)
+
+```ini
+[Interface]
+PrivateKey = wBigDtF46xhwMGe1Oy/IC7OTk3Kri1LMO73yl+pViEU=
+Address = 10.0.0.1
+ListenPort = 51820
+
+[Peer]
+PublicKey =
+Endpoint = 217.160.188.152:51820
+AllowedIPs = 10.0.0.2/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.3/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.4/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.5/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.6/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.7/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.8/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.9/32
+PersistentKeepalive = 25
+```
+
 9. **Test of de tunnel werkt**
 
 ```bash
