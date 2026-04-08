@@ -34,14 +34,26 @@ case "${ROLE_NAME}" in
   first-master)
     KEEPALIVED_STATE="MASTER"
     KEEPALIVED_PRIORITY="200"
+    HAPROXY_BIND_ADDRESS="0.0.0.0:6443"
+    KEEPALIVED_ROUTER_NAME="master1"
+    KEEPALIVED_UNICAST_SRC_IP="${KEEPALIVED_UNICAST_SRC_IP:-10.0.0.1}"
+    KEEPALIVED_UNICAST_PEERS="${KEEPALIVED_UNICAST_PEERS:-10.0.0.2}"
     ;;
   master)
     KEEPALIVED_STATE="BACKUP"
     KEEPALIVED_PRIORITY="150"
+    HAPROXY_BIND_ADDRESS="*:6443"
+    KEEPALIVED_ROUTER_NAME="master2"
+    KEEPALIVED_UNICAST_SRC_IP="${KEEPALIVED_UNICAST_SRC_IP:-10.0.0.2}"
+    KEEPALIVED_UNICAST_PEERS="${KEEPALIVED_UNICAST_PEERS:-10.0.0.1}"
     ;;
   *)
     KEEPALIVED_STATE="BACKUP"
     KEEPALIVED_PRIORITY="100"
+    HAPROXY_BIND_ADDRESS="*:6443"
+    KEEPALIVED_ROUTER_NAME="${ROLE_NAME}"
+    KEEPALIVED_UNICAST_SRC_IP="${KEEPALIVED_UNICAST_SRC_IP:-}"
+    KEEPALIVED_UNICAST_PEERS="${KEEPALIVED_UNICAST_PEERS:-}"
     ;;
 esac
 
@@ -83,6 +95,16 @@ if (( ${#backend_lines[@]} == 0 )); then
   exit 1
 fi
 
+unicast_peer_lines=()
+IFS=',' read -r -a keepalived_peers <<< "${KEEPALIVED_UNICAST_PEERS}"
+for peer_ip in "${keepalived_peers[@]}"; do
+  peer_ip="$(echo "${peer_ip}" | xargs)"
+  if [[ -z "${peer_ip}" ]]; then
+    continue
+  fi
+  unicast_peer_lines+=("        ${peer_ip}")
+done
+
 cat > /etc/haproxy/haproxy.cfg <<CFG
 global
     log /dev/log local0
@@ -98,7 +120,7 @@ defaults
     timeout server 60s
 
 frontend k8s_api_frontend
-    bind *:6443
+    bind ${HAPROXY_BIND_ADDRESS}
     default_backend k8s_api_backend
 
 backend k8s_api_backend
@@ -110,13 +132,17 @@ CFG
 
 cat > /etc/keepalived/keepalived.conf <<CFG
 global_defs {
-    router_id LVS_${ROLE_NAME}
+    router_id LVS_${KEEPALIVED_ROUTER_NAME}
+    script_user root
+    enable_script_security
 }
 
 vrrp_script chk_haproxy {
-    script "pidof haproxy"
+    script "/usr/bin/pgrep haproxy"
     interval 2
-    weight 2
+    weight -20
+    fall 2
+    rise 2
 }
 
 vrrp_instance VI_${ROUTER_ID} {
@@ -125,6 +151,11 @@ vrrp_instance VI_${ROUTER_ID} {
     virtual_router_id ${ROUTER_ID}
     priority ${KEEPALIVED_PRIORITY}
     advert_int 1
+
+    unicast_src_ip ${KEEPALIVED_UNICAST_SRC_IP}
+    unicast_peer {
+$(printf '%s\n' "${unicast_peer_lines[@]}")
+    }
 
     authentication {
         auth_type PASS
