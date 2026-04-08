@@ -100,7 +100,7 @@ MAX_PHASE_ATTEMPTS=3 bash ./install_server.sh
 
 ### Kubernetes-laag (tussen base en role)
 
-Doel: node voorbereiden zodat Kubernetes kan draaien (zonder cluster init/join te starten).
+Doel: node voorbereiden zodat Kubernetes kan draaien.
 
 - Runtime & tools:
   - containerd installeren + configureren
@@ -121,6 +121,10 @@ Doel: node voorbereiden zodat Kubernetes kan draaien (zonder cluster init/join t
   - service `enable`
 - Debug tools:
   - `crictl` (optioneel, indien package beschikbaar)
+- Rolgedrag:
+  - `first-master` voert automatisch `kubeadm init` uit als `/etc/kubernetes/admin.conf` nog niet bestaat
+  - gebruikt `CONTROL_PLANE_ENDPOINT` + `HAPROXY_BIND_PORT` als control-plane endpoint
+  - gebruikt `POD_NETWORK_CIDR=10.244.0.0/16` als default (overschrijfbaar via env)
 - Repositories/packages:
   - Kubernetes apt repo toevoegen
   - `kubelet`, `kubeadm`, `kubectl` installeren en op hold zetten
