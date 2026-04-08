@@ -142,6 +142,81 @@ curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/mai
 - In de basisinstallatie wordt `systemd-journald` geconfigureerd met `MaxRetentionSec=2day`.
 - Logs worden daarmee maximaal 2 dagen bewaard.
 
+### Servers handmatig koppelen met WireGuard (netwerk opzetten + testen)
+
+Als je peers niet via automation wilt toevoegen, kun je twee (of meer) servers handmatig koppelen.
+Onderstaand voorbeeld gaat uit van:
+
+- Server A: `10.0.0.1`
+- Server B: `10.0.0.2`
+- Interface: `wg0`
+- Poort: `51820/udp`
+
+1. **Controleer op beide servers of WireGuard draait en het lokale adres klopt**
+
+```bash
+sudo systemctl status wg-quick@wg0 --no-pager
+ip -4 addr show wg0
+```
+
+2. **Haal op elke server de public key op**
+
+```bash
+sudo cat /etc/wireguard/public.key
+```
+
+3. **Voeg op Server A de peer van Server B toe**
+
+> Vervang `<PUBKEY_SERVER_B>` met de echte public key van Server B.
+
+```bash
+sudo wg set wg0 \
+  peer <PUBKEY_SERVER_B> \
+  allowed-ips 10.0.0.2/32 \
+  persistent-keepalive 25
+```
+
+4. **Voeg op Server B de peer van Server A toe (met endpoint)**
+
+> Vervang `<PUBKEY_SERVER_A>` met de echte public key van Server A.  
+> Vervang `<PUB_IP_OF_DNS_SERVER_A>` met het publieke IP of DNS van Server A.
+
+```bash
+sudo wg set wg0 \
+  peer <PUBKEY_SERVER_A> \
+  endpoint <PUB_IP_OF_DNS_SERVER_A>:51820 \
+  allowed-ips 10.0.0.1/32 \
+  persistent-keepalive 25
+```
+
+5. **Maak peers persistent in config (`SaveConfig = true` staat standaard aan)**
+
+```bash
+sudo systemctl restart wg-quick@wg0
+```
+
+6. **Test of de tunnel werkt**
+
+```bash
+# Op Server A:
+ping -c 3 10.0.0.2
+
+# Op Server B:
+ping -c 3 10.0.0.1
+```
+
+7. **Controleer handshake en dataverkeer**
+
+```bash
+sudo wg show wg0
+```
+
+Je ziet dan o.a. `latest handshake` en oplopende `transfer` counters. Als die ontbreken:
+
+- controleer of UDP `51820` open staat op de host en eventuele cloud firewall;
+- controleer of `allowed-ips` exact de peer-IP(s) bevat;
+- controleer endpoint/IP/DNS en of de tijd op beide servers correct is (NTP).
+
 ### Twee masters koppelen (first-master + master)
 
 De rol `first-master` en `master` installeren automatisch `keepalived` en `haproxy`, schrijven direct werkende configuraties weg (`/etc/keepalived/keepalived.conf` en `/etc/haproxy/haproxy.cfg`) en starten/enable'n beide services meteen.
