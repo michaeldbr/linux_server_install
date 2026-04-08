@@ -217,6 +217,42 @@ Je ziet dan o.a. `latest handshake` en oplopende `transfer` counters. Als die on
 - controleer of `allowed-ips` exact de peer-IP(s) bevat;
 - controleer endpoint/IP/DNS en of de tijd op beide servers correct is (NTP).
 
+### Peer toevoegen in WireGuard config (persistent via bestand)
+
+Wil je peers niet alleen runtime met `wg set` toevoegen, maar direct in de config bewaren, voeg dan een `[Peer]` block toe in `/etc/wireguard/wg0.conf`.
+
+1. **Open de config**
+
+```bash
+sudo nano /etc/wireguard/wg0.conf
+```
+
+2. **Voeg onder `[Interface]` één of meerdere `[Peer]` blocks toe**
+
+```ini
+[Peer]
+PublicKey = <PUBKEY_PEER>
+AllowedIPs = 10.0.0.2/32
+Endpoint = <PUB_IP_OF_DNS_PEER>:51820
+PersistentKeepalive = 25
+```
+
+Voor alleen intern verkeer (zonder publiek endpoint, bijvoorbeeld site-to-site met vaste route) kun je `Endpoint` weglaten.
+
+3. **Herstart WireGuard**
+
+```bash
+sudo systemctl restart wg-quick@wg0
+```
+
+4. **Controleer of de peer geladen is**
+
+```bash
+sudo wg show wg0
+```
+
+Tip: de installer zet `SaveConfig = true` in `[Interface]`. Daardoor kunnen runtime wijzigingen via `wg set` ook teruggeschreven worden naar `wg0.conf` wanneer de interface netjes wordt afgesloten/herstart.
+
 ### Twee masters koppelen (first-master + master)
 
 De rol `first-master` en `master` installeren automatisch `keepalived` en `haproxy`, schrijven direct werkende configuraties weg (`/etc/keepalived/keepalived.conf` en `/etc/haproxy/haproxy.cfg`) en starten/enable'n beide services meteen.
