@@ -159,13 +159,31 @@ sudo systemctl status wg-quick@wg0 --no-pager
 ip -4 addr show wg0
 ```
 
-2. **Haal op elke server de public key op**
+2. **Maak (indien nodig) direct een keypair en zet de public key meteen in een peer-file**
+
+Handig als je op een nieuwe server nog geen sleutels hebt en je meteen de juiste peer-regel wilt bewaren:
+
+```bash
+# Voorbeeld op Server B (peer file voor Server A)
+sudo install -d -m 700 /etc/wireguard/peers
+sudo bash -c '
+  umask 077
+  [[ -f /etc/wireguard/private.key ]] || wg genkey > /etc/wireguard/private.key
+  wg pubkey < /etc/wireguard/private.key > /etc/wireguard/public.key
+  printf "[Peer]\nPublicKey = %s\nAllowedIPs = 10.0.0.1/32\nPersistentKeepalive = 25\n" "$(cat /etc/wireguard/public.key)" > /etc/wireguard/peers/server-a.peer
+'
+```
+
+> Vervang in het voorbeeld `AllowedIPs` en de bestandsnaam naar de gewenste peer.  
+> Deze stap maakt private/public key en schrijft de public key direct weg in een peer-file die je later in `wg0.conf` kunt opnemen of met `wg set` kunt gebruiken.
+
+3. **Haal op elke server de public key op**
 
 ```bash
 sudo cat /etc/wireguard/public.key
 ```
 
-3. **Voeg op Server A de peer van Server B toe**
+4. **Voeg op Server A de peer van Server B toe**
 
 > Vervang `<PUBKEY_SERVER_B>` met de echte public key van Server B.
 
@@ -176,7 +194,7 @@ sudo wg set wg0 \
   persistent-keepalive 25
 ```
 
-4. **Voeg op Server B de peer van Server A toe (met endpoint)**
+5. **Voeg op Server B de peer van Server A toe (met endpoint)**
 
 > Vervang `<PUBKEY_SERVER_A>` met de echte public key van Server A.  
 > Vervang `<PUB_IP_OF_DNS_SERVER_A>` met het publieke IP of DNS van Server A.
@@ -189,13 +207,13 @@ sudo wg set wg0 \
   persistent-keepalive 25
 ```
 
-5. **Maak peers persistent in config (`SaveConfig = true` staat standaard aan)**
+6. **Maak peers persistent in config (`SaveConfig = true` staat standaard aan)**
 
 ```bash
 sudo systemctl restart wg-quick@wg0
 ```
 
-6. **Test of de tunnel werkt**
+7. **Test of de tunnel werkt**
 
 ```bash
 # Op Server A:
@@ -205,7 +223,7 @@ ping -c 3 10.0.0.2
 ping -c 3 10.0.0.1
 ```
 
-7. **Controleer handshake en dataverkeer**
+8. **Controleer handshake en dataverkeer**
 
 ```bash
 sudo wg show wg0
