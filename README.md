@@ -207,13 +207,44 @@ sudo wg set wg0 \
   persistent-keepalive 25
 ```
 
-6. **Maak peers persistent in config (`SaveConfig = true` staat standaard aan)**
+6. **Peer handmatig toevoegen in `wg0.conf` (persistent config-bestand)**
+
+Als je peers liever direct in de WireGuard-config beheert, voeg dan een `[Peer]` blok toe in `/etc/wireguard/wg0.conf`:
+
+```ini
+[Peer]
+PublicKey = <PUBKEY_SERVER_A>
+AllowedIPs = 10.0.0.1/32
+Endpoint = <PUB_IP_OF_DNS_SERVER_A>:51820
+PersistentKeepalive = 25
+```
+
+7. **Eigen private/public key bewaren in `[Interface]` in `wg0.conf`**
+
+`[Interface]` gebruikt `PrivateKey`. De public key kun je in hetzelfde blok als comment opslaan:
+
+```ini
+[Interface]
+PrivateKey = <PRIVATE_KEY_VAN_DEZE_SERVER>
+# PublicKey = <PUBLIC_KEY_VAN_DEZE_SERVER>
+Address = 10.0.0.2/24
+ListenPort = 51820
+SaveConfig = true
+```
+
+Sleutels genereren (indien nodig) en in bestanden wegschrijven:
+
+```bash
+sudo bash -c 'umask 077; [[ -f /etc/wireguard/private.key ]] || wg genkey > /etc/wireguard/private.key; wg pubkey < /etc/wireguard/private.key > /etc/wireguard/public.key'
+```
+
+8. **Herlaad WireGuard en maak actieve peers persistent**
 
 ```bash
 sudo systemctl restart wg-quick@wg0
 ```
 
-7. **Test of de tunnel werkt**
+9. **Test of de tunnel werkt**
 
 ```bash
 # Op Server A:
@@ -223,7 +254,7 @@ ping -c 3 10.0.0.2
 ping -c 3 10.0.0.1
 ```
 
-8. **Controleer handshake en dataverkeer**
+10. **Controleer handshake en dataverkeer**
 
 ```bash
 sudo wg show wg0
