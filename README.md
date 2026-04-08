@@ -100,7 +100,7 @@ MAX_PHASE_ATTEMPTS=3 bash ./install_server.sh
 
 ### Kubernetes-laag (tussen base en role)
 
-Doel: node voorbereiden zodat Kubernetes kan draaien (zonder cluster init/join te starten).
+Doel: node voorbereiden zodat Kubernetes kan draaien.
 
 - Runtime & tools:
   - containerd installeren + configureren
@@ -121,6 +121,10 @@ Doel: node voorbereiden zodat Kubernetes kan draaien (zonder cluster init/join t
   - service `enable`
 - Debug tools:
   - `crictl` (optioneel, indien package beschikbaar)
+- Rolgedrag:
+  - `first-master` voert automatisch `kubeadm init` uit als `/etc/kubernetes/admin.conf` nog niet bestaat
+  - gebruikt `CONTROL_PLANE_ENDPOINT` + `HAPROXY_BIND_PORT` als control-plane endpoint
+  - gebruikt `POD_NETWORK_CIDR=10.244.0.0/16` als default (overschrijfbaar via env)
 - Repositories/packages:
   - Kubernetes apt repo toevoegen
   - `kubelet`, `kubeadm`, `kubectl` installeren en op hold zetten
@@ -257,6 +261,63 @@ sudo bash -c 'umask 077; [[ -f /etc/wireguard/private.key ]] || wg genkey > /etc
 
 ```bash
 sudo systemctl restart wg-quick@wg0
+```
+
+### WireGuard voorbeeldconfig (copy/paste)
+
+```ini
+[Interface]
+PrivateKey = wBigDtF46xhwMGe1Oy/IC7OTk3Kri1LMO73yl+pViEU=
+Address = 10.0.0.1
+ListenPort = 51820
+
+[Peer]
+PublicKey =
+Endpoint = 217.160.188.152:51820
+AllowedIPs = 10.0.0.2/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.3/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.4/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.5/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.6/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.7/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.8/32
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey =
+Endpoint = :51820
+AllowedIPs = 10.0.0.9/32
+PersistentKeepalive = 25
 ```
 
 9. **Test of de tunnel werkt**
