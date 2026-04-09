@@ -129,21 +129,18 @@ Doel: node voorbereiden zodat Kubernetes kan draaien.
   - Kubernetes apt repo toevoegen
   - `kubelet`, `kubeadm`, `kubectl` installeren en op hold zetten
 
-### Control-plane endpoint service (keepalived + haproxy)
+### Control-plane endpoint service (haproxy)
 
 Voor rollen `first-master` en `master` wordt `scripts/services/install_control_plane_lb.sh` aangeroepen.
 
 - Standaard endpoint: `CONTROL_PLANE_ENDPOINT=10.0.0.100`
 - Standaard HAProxy bindpoort: `HAPROXY_BIND_PORT=7443`
-- `KEEPALIVED_UNICAST_SRC_IP` default:
-  - op basis van `WIREGUARD_SERVER_IP` (als gezet)
-  - anders fallback naar `10.0.0.1` (`first-master`) of `10.0.0.2` (`master`)
 - `CONTROL_PLANE_BACKENDS` default:
-  - automatisch `${KEEPALIVED_UNICAST_SRC_IP},${KEEPALIVED_UNICAST_PEERS}`
-  - dus standaard alleen de twee masters i.p.v. een brede lijst
+  - `first-master`: `${WIREGUARD_SERVER_IP:-10.0.0.1}`
+  - `master`: `${WIREGUARD_SERVER_IP:-10.0.0.2}`
+  - andere rollen: `${WIREGUARD_SERVER_IP}` (indien gezet)
 
-Aanbevolen in productie: zet `CONTROL_PLANE_ENDPOINT`, `KEEPALIVED_UNICAST_SRC_IP`,
-`KEEPALIVED_UNICAST_PEERS` en `CONTROL_PLANE_BACKENDS` expliciet zodat ze exact bij je netwerk passen.
+Aanbevolen in productie: zet `CONTROL_PLANE_ENDPOINT` en `CONTROL_PLANE_BACKENDS` expliciet zodat ze exact bij je netwerk passen.
 
 ### Gebruik
 
@@ -350,24 +347,27 @@ Je ziet dan o.a. `latest handshake` en oplopende `transfer` counters. Als die on
 
 ### Twee masters koppelen (first-master + master)
 
-De rol `first-master` en `master` installeren automatisch `keepalived` en `haproxy`, schrijven direct werkende configuraties weg (`/etc/keepalived/keepalived.conf` en `/etc/haproxy/haproxy.cfg`) en starten/enable'n beide services meteen.
+De rol `first-master` en `master` installeren automatisch `haproxy`, schrijven direct werkende configuratie weg (`/etc/haproxy/haproxy.cfg`) en starten/enable'n de service meteen.
 Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-plane-endpoint`:
 
 - `first-master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
 - `master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
 
-- HAProxy backend defaults: `10.0.0.1:6443` t/m `10.0.0.9:6443` (optioneel te overschrijven met `CONTROL_PLANE_BACKENDS`, comma-separated)
+- HAProxy backend defaults:
+  - `first-master`: `10.0.0.1:6443` (of `${WIREGUARD_SERVER_IP}:6443`)
+  - `master`: `10.0.0.2:6443` (of `${WIREGUARD_SERVER_IP}:6443`)
+  - optioneel te overschrijven met `CONTROL_PLANE_BACKENDS` (comma-separated)
 
-> ⚠️ **Belangrijk voor een werkende HA-opzet**
+> ⚠️ **Belangrijk voor een werkende opzet**
 >
-> Gebruik op **beide** masters altijd exact hetzelfde endpoint (standaard `10.0.0.100`) én stel unicast peers expliciet in. Voorbeeld:
+> Gebruik op **beide** masters altijd exact hetzelfde endpoint (standaard `10.0.0.100`) en stel backends expliciet in. Voorbeeld:
 >
 > ```bash
 > # first-master
-> CONTROL_PLANE_ENDPOINT=10.0.0.100 KEEPALIVED_UNICAST_SRC_IP=10.0.0.1 KEEPALIVED_UNICAST_PEERS=10.0.0.2 bash scripts/roles/first-master/apply.sh
+> CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2 bash scripts/roles/first-master/apply.sh
 >
 > # tweede master
-> CONTROL_PLANE_ENDPOINT=10.0.0.100 KEEPALIVED_UNICAST_SRC_IP=10.0.0.2 KEEPALIVED_UNICAST_PEERS=10.0.0.1 bash scripts/roles/master/apply.sh
+> CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2 bash scripts/roles/master/apply.sh
 > ```
 >
 > Let op de LB-poort: HAProxy bindt hier bewust op `7443` om poortconflict met lokale kube-apiserver (`6443`) op master nodes te vermijden.
