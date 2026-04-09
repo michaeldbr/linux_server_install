@@ -135,7 +135,7 @@ Voor rol `master` wordt `scripts/services/install_control_plane_lb.sh` aangeroep
 - Standaard endpoint: `CONTROL_PLANE_ENDPOINT=10.0.0.100`
 - Standaard HAProxy bindpoort: `HAPROXY_BIND_PORT=7443`
 - `CONTROL_PLANE_BACKENDS` default:
-  - `master`: `10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4,10.0.0.5,10.0.0.6,10.0.0.7,10.0.0.8,10.0.0.9`
+  - `master`: `10.0.0.1,10.0.0.2,10.0.0.3`
   - andere rollen: `${WIREGUARD_SERVER_IP}` (indien gezet)
 
 Aanbevolen in productie: zet `CONTROL_PLANE_ENDPOINT` en `CONTROL_PLANE_BACKENDS` expliciet zodat ze exact bij je netwerk passen.
@@ -351,7 +351,7 @@ Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-pl
 - `master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
 
 - HAProxy backend defaults:
-  - `master`: `10.0.0.1:6443` t/m `10.0.0.9:6443`
+  - `master`: `10.0.0.1:6443` t/m `10.0.0.3:6443`
   - optioneel te overschrijven met `CONTROL_PLANE_BACKENDS` (comma-separated)
 
 > ⚠️ **Belangrijk voor een werkende opzet**

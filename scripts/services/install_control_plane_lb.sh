@@ -18,7 +18,7 @@ fi
 
 case "${ROLE_NAME}" in
   master)
-    DEFAULT_BACKEND_IP="10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4,10.0.0.5,10.0.0.6,10.0.0.7,10.0.0.8,10.0.0.9"
+    DEFAULT_BACKEND_IP="10.0.0.1,10.0.0.2,10.0.0.3"
     ;;
   *)
     DEFAULT_BACKEND_IP="${WIREGUARD_SERVER_IP:-}"
