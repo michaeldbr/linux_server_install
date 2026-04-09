@@ -15,7 +15,7 @@ validate_internal_ip() {
 validate_role() {
   local role="${1:-}"
   case "${role}" in
-    first-master|master|worker|traffic) return 0 ;;
+    master|worker|traffic) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -23,7 +23,7 @@ validate_role() {
 validate_role_choice() {
   local role_choice="${1:-}"
   case "${role_choice}" in
-    1|2|3|4) return 0 ;;
+    1|2|3) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -31,10 +31,9 @@ validate_role_choice() {
 role_from_choice() {
   local role_choice="${1:-}"
   case "${role_choice}" in
-    1) printf 'first-master' ;;
-    2) printf 'master' ;;
-    3) printf 'worker' ;;
-    4) printf 'traffic' ;;
+    1) printf 'master' ;;
+    2) printf 'worker' ;;
+    3) printf 'traffic' ;;
     *) return 1 ;;
   esac
 }
@@ -91,17 +90,16 @@ collect_install_input() {
     "[PRE-FLIGHT] Ongeldig IP. Gebruik formaat 10.0.0.X waarbij X tussen 1 en 254 ligt.")"
 
   echo "[PRE-FLIGHT] Kies een rolnummer:" >&"${tty_fd}"
-  echo "  1) first-master" >&"${tty_fd}"
-  echo "  2) master" >&"${tty_fd}"
-  echo "  3) worker" >&"${tty_fd}"
-  echo "  4) traffic" >&"${tty_fd}"
+  echo "  1) master" >&"${tty_fd}"
+  echo "  2) worker" >&"${tty_fd}"
+  echo "  3) traffic" >&"${tty_fd}"
 
   local role_choice
   role_choice="$(prompt_with_confirmation "${tty_fd}" \
-    "Voer rolnummer in (1-4): " \
+    "Voer rolnummer in (1-3): " \
     "Voer hetzelfde rolnummer opnieuw in ter bevestiging: " \
     validate_role_choice \
-    "[PRE-FLIGHT] Ongeldig rolnummer. Kies: 1, 2, 3 of 4.")"
+    "[PRE-FLIGHT] Ongeldig rolnummer. Kies: 1, 2 of 3.")"
   SERVER_ROLE="$(role_from_choice "${role_choice}")"
   validate_role "${SERVER_ROLE}"
 

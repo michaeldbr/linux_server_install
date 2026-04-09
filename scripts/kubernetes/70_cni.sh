@@ -11,7 +11,7 @@ fi
 
 if [[ ! -f "${KUBECONFIG_PATH}" ]]; then
   echo "[CNI] ${KUBECONFIG_PATH} bestaat nog niet."
-  echo "[CNI] Draai eerst kubeadm init op de first-master en run dit script daarna opnieuw."
+  echo "[CNI] Draai eerst kubeadm init op een master node en run dit script daarna opnieuw."
   exit 0
 fi
 
