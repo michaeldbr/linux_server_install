@@ -128,12 +128,20 @@ Doel: node voorbereiden zodat Kubernetes kan draaien.
   - Kubernetes apt repo toevoegen
   - `kubelet`, `kubeadm`, `kubectl` installeren en op hold zetten
 
-### Control-plane endpoint service (haproxy)
+### Control-plane endpoint service (haproxy + keepalived)
 
 Voor rol `master` wordt `scripts/services/install_control_plane_lb.sh` aangeroepen.
+Dit script installeert en start zowel `haproxy` als `keepalived`.
 
 - Standaard endpoint: `CONTROL_PLANE_ENDPOINT=10.0.0.100`
 - Standaard HAProxy bindpoort: `HAPROXY_BIND_PORT=7443`
+- Keepalived defaults:
+  - `KEEPALIVED_ROUTER_ID=51`
+  - `KEEPALIVED_PRIORITY=150`
+  - `KEEPALIVED_STATE=BACKUP`
+  - `KEEPALIVED_AUTH_PASS=K8sHA001` (wordt afgekapt op 8 chars ivm keepalived PASS auth)
+  - `KEEPALIVED_INTERFACE` wordt automatisch gedetecteerd (of handmatig gezet)
+  - `KEEPALIVED_LOCAL_IP` default: `${WIREGUARD_SERVER_IP}`
 - `CONTROL_PLANE_BACKENDS` default:
   - `master`: `10.0.0.1,10.0.0.2,10.0.0.3`
   - andere rollen: `${WIREGUARD_SERVER_IP}` (indien gezet)
@@ -345,7 +353,7 @@ Je ziet dan o.a. `latest handshake` en oplopende `transfer` counters. Als die on
 
 ### Twee masters koppelen (master + master)
 
-De rol `master` installeert automatisch `haproxy`, schrijft direct werkende configuratie weg (`/etc/haproxy/haproxy.cfg`) en start/enable't de service meteen.
+De rol `master` installeert automatisch `haproxy` en `keepalived`, schrijft direct werkende configuraties weg (`/etc/haproxy/haproxy.cfg` en `/etc/keepalived/keepalived.conf`) en start/enable't beide services meteen.
 Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-plane-endpoint`:
 
 - `master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
@@ -368,6 +376,40 @@ Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-pl
 >
 > Let op de LB-poort: HAProxy bindt hier bewust op `7443` om poortconflict met lokale kube-apiserver (`6443`) op master nodes te vermijden.
 > Gebruik daarom kubeadm/join tegen `<VIP>:7443`.
+
+Voorbeeld van de gegenereerde keepalived-config:
+
+```conf
+global_defs {
+    router_id master_<hostname>
+}
+
+vrrp_script chk_haproxy {
+    script "pidof haproxy"
+    interval 2
+    fall 2
+    rise 2
+}
+
+vrrp_instance VI_K8S_API {
+    state BACKUP
+    interface <auto-detected-of-KEEPALIVED_INTERFACE>
+    virtual_router_id 51
+    priority 150
+    advert_int 1
+    # Optioneel unicast_src_ip + unicast_peer block als KEEPALIVED_LOCAL_IP en peers bekend zijn
+    authentication {
+        auth_type PASS
+        auth_pass K8sHA001
+    }
+    virtual_ipaddress {
+        10.0.0.100/32 dev <interface>
+    }
+    track_script {
+        chk_haproxy
+    }
+}
+```
 
 De install scripts bereiden nodes voor, maar starten cluster `init`/`join` niet automatisch.
 Gebruik na installatie:

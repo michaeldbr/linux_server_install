@@ -5,6 +5,12 @@ ROLE_NAME="${1:-}"
 CONTROL_PLANE_ENDPOINT="${2:-}"
 CONTROL_PLANE_BACKENDS="${CONTROL_PLANE_BACKENDS:-}"
 HAPROXY_BIND_PORT="${HAPROXY_BIND_PORT:-7443}"
+KEEPALIVED_INTERFACE="${KEEPALIVED_INTERFACE:-}"
+KEEPALIVED_ROUTER_ID="${KEEPALIVED_ROUTER_ID:-51}"
+KEEPALIVED_PRIORITY="${KEEPALIVED_PRIORITY:-}"
+KEEPALIVED_AUTH_PASS="${KEEPALIVED_AUTH_PASS:-K8sHA001}"
+KEEPALIVED_STATE="${KEEPALIVED_STATE:-BACKUP}"
+KEEPALIVED_LOCAL_IP="${KEEPALIVED_LOCAL_IP:-${WIREGUARD_SERVER_IP:-}}"
 
 if [[ -z "${ROLE_NAME}" ]]; then
   echo "[SERVICES] FOUT: role argument ontbreekt." >&2
@@ -34,18 +40,36 @@ if [[ -z "${CONTROL_PLANE_BACKENDS//,/}" ]]; then
   exit 1
 fi
 
-echo "[SERVICES:${ROLE_NAME}] haproxy installeren..."
+detect_keepalived_interface() {
+  if [[ -n "${KEEPALIVED_INTERFACE}" ]]; then
+    echo "${KEEPALIVED_INTERFACE}"
+    return 0
+  fi
+
+  local inferred_iface
+  inferred_iface="$(ip -o route get "${CONTROL_PLANE_ENDPOINT}" 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}')"
+  if [[ -n "${inferred_iface}" ]]; then
+    echo "${inferred_iface}"
+    return 0
+  fi
+
+  inferred_iface="$(ip -o link show | awk -F': ' '$2 != "lo" {print $2; exit}')"
+  if [[ -n "${inferred_iface}" ]]; then
+    echo "${inferred_iface}"
+    return 0
+  fi
+
+  echo "lo"
+}
+
+if [[ -z "${KEEPALIVED_PRIORITY}" ]]; then
+  KEEPALIVED_PRIORITY="150"
+fi
+
+echo "[SERVICES:${ROLE_NAME}] haproxy en keepalived installeren..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y haproxy
-
-install -d -m 0755 /etc/linux-server-install
-cat > /etc/linux-server-install/control-plane-endpoint <<CFG
-CONTROL_PLANE_ENDPOINT=${CONTROL_PLANE_ENDPOINT}
-CONTROL_PLANE_BACKENDS=${CONTROL_PLANE_BACKENDS}
-HAPROXY_BIND_PORT=${HAPROXY_BIND_PORT}
-CFG
-chmod 0644 /etc/linux-server-install/control-plane-endpoint
+apt-get install -y haproxy keepalived
 
 backend_lines=()
 IFS=',' read -r -a backend_ips <<< "${CONTROL_PLANE_BACKENDS}"
@@ -88,9 +112,88 @@ $(printf '%s
 CFG
 
 chmod 0644 /etc/haproxy/haproxy.cfg
-
 systemctl enable --now haproxy
+
+resolved_keepalived_interface="$(detect_keepalived_interface)"
+if [[ -z "${KEEPALIVED_INTERFACE}" ]]; then
+  KEEPALIVED_INTERFACE="${resolved_keepalived_interface}"
+fi
+
+install -d -m 0755 /etc/linux-server-install
+cat > /etc/linux-server-install/control-plane-endpoint <<CFG
+CONTROL_PLANE_ENDPOINT=${CONTROL_PLANE_ENDPOINT}
+CONTROL_PLANE_BACKENDS=${CONTROL_PLANE_BACKENDS}
+HAPROXY_BIND_PORT=${HAPROXY_BIND_PORT}
+KEEPALIVED_INTERFACE=${KEEPALIVED_INTERFACE}
+KEEPALIVED_LOCAL_IP=${KEEPALIVED_LOCAL_IP}
+KEEPALIVED_ROUTER_ID=${KEEPALIVED_ROUTER_ID}
+KEEPALIVED_PRIORITY=${KEEPALIVED_PRIORITY}
+KEEPALIVED_STATE=${KEEPALIVED_STATE}
+CFG
+chmod 0644 /etc/linux-server-install/control-plane-endpoint
+
+keepalived_peer_lines=()
+for backend_ip in "${backend_ips[@]}"; do
+  peer_ip="$(echo "${backend_ip}" | xargs)"
+  if [[ -z "${peer_ip}" ]]; then
+    continue
+  fi
+  if [[ -n "${KEEPALIVED_LOCAL_IP}" && "${peer_ip}" == "${KEEPALIVED_LOCAL_IP}" ]]; then
+    continue
+  fi
+  keepalived_peer_lines+=("        ${peer_ip}")
+done
+
+unicast_block=""
+if [[ -n "${KEEPALIVED_LOCAL_IP}" && ${#keepalived_peer_lines[@]} -gt 0 ]]; then
+  unicast_block="    unicast_src_ip ${KEEPALIVED_LOCAL_IP}
+    unicast_peer {
+$(printf '%s\n' "${keepalived_peer_lines[@]}")
+    }"
+fi
+
+if [[ ${#KEEPALIVED_AUTH_PASS} -gt 8 ]]; then
+  KEEPALIVED_AUTH_PASS="${KEEPALIVED_AUTH_PASS:0:8}"
+fi
+
+cat > /etc/keepalived/keepalived.conf <<CFG
+global_defs {
+    router_id ${ROLE_NAME}_$(hostname -s)
+}
+
+vrrp_script chk_haproxy {
+    script "pidof haproxy"
+    interval 2
+    fall 2
+    rise 2
+}
+
+vrrp_instance VI_K8S_API {
+    state ${KEEPALIVED_STATE}
+    interface ${KEEPALIVED_INTERFACE}
+    virtual_router_id ${KEEPALIVED_ROUTER_ID}
+    priority ${KEEPALIVED_PRIORITY}
+    advert_int 1
+${unicast_block}
+    authentication {
+        auth_type PASS
+        auth_pass ${KEEPALIVED_AUTH_PASS}
+    }
+    virtual_ipaddress {
+        ${CONTROL_PLANE_ENDPOINT}/32 dev ${KEEPALIVED_INTERFACE}
+    }
+    track_script {
+        chk_haproxy
+    }
+}
+CFG
+
+chmod 0644 /etc/keepalived/keepalived.conf
+systemctl enable --now keepalived
 
 echo "[SERVICES:${ROLE_NAME}] Endpoint vastgelegd op ${CONTROL_PLANE_ENDPOINT}."
 echo "[SERVICES:${ROLE_NAME}] haproxy geconfigureerd en gestart."
+echo "[SERVICES:${ROLE_NAME}] keepalived geconfigureerd en gestart."
+echo "[SERVICES:${ROLE_NAME}] keepalived.conf:"
+cat /etc/keepalived/keepalived.conf
 echo "[SERVICES:${ROLE_NAME}] Klaar."
