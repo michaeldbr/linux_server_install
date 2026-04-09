@@ -40,9 +40,6 @@ repo/
 │   │   ├── 60_crictl.sh
 │   │   └── 95_verify_repair.sh
 │   ├── roles/
-│   │   ├── first-master/
-│   │   │   ├── apply.sh
-│   │   │   └── firewall.sh
 │   │   ├── master/
 │   │   │   ├── apply.sh
 │   │   │   └── firewall.sh
@@ -70,7 +67,7 @@ repo/
 `install_server.sh` vraagt interactief (via `/dev/tty`) en altijd met dubbele bevestiging:
 
 1. Intern IP (`10.0.0.X`)
-2. Rol (`first-master`, `master`, `worker`, `traffic`)
+2. Rol (`master`, `worker`, `traffic`)
 3. Hostname
 
 Als de twee antwoorden per vraag niet gelijk zijn, wordt die specifieke vraag opnieuw gesteld.
@@ -122,7 +119,9 @@ Doel: node voorbereiden zodat Kubernetes kan draaien.
 - Debug tools:
   - `crictl` (optioneel, indien package beschikbaar)
 - Rolgedrag:
-  - `first-master` voert automatisch `kubeadm init` uit als `/etc/kubernetes/admin.conf` nog niet bestaat
+  - De installer voert **geen** `kubeadm init` of `kubeadm join` automatisch uit
+  - Gebruik rol `master` voor control-plane voorbereiding
+  - `kubeadm init` en `kubeadm join` voer je handmatig uit na de installatie
   - gebruikt `CONTROL_PLANE_ENDPOINT` + `HAPROXY_BIND_PORT` als control-plane endpoint
   - gebruikt `POD_NETWORK_CIDR=10.244.0.0/16` als default (overschrijfbaar via env)
 - Repositories/packages:
@@ -131,13 +130,12 @@ Doel: node voorbereiden zodat Kubernetes kan draaien.
 
 ### Control-plane endpoint service (haproxy)
 
-Voor rollen `first-master` en `master` wordt `scripts/services/install_control_plane_lb.sh` aangeroepen.
+Voor rol `master` wordt `scripts/services/install_control_plane_lb.sh` aangeroepen.
 
 - Standaard endpoint: `CONTROL_PLANE_ENDPOINT=10.0.0.100`
 - Standaard HAProxy bindpoort: `HAPROXY_BIND_PORT=7443`
 - `CONTROL_PLANE_BACKENDS` default:
-  - `first-master`: `${WIREGUARD_SERVER_IP:-10.0.0.1}`
-  - `master`: `${WIREGUARD_SERVER_IP:-10.0.0.2}`
+  - `master`: `10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4,10.0.0.5,10.0.0.6,10.0.0.7,10.0.0.8,10.0.0.9`
   - andere rollen: `${WIREGUARD_SERVER_IP}` (indien gezet)
 
 Aanbevolen in productie: zet `CONTROL_PLANE_ENDPOINT` en `CONTROL_PLANE_BACKENDS` expliciet zodat ze exact bij je netwerk passen.
@@ -345,17 +343,15 @@ Je ziet dan o.a. `latest handshake` en oplopende `transfer` counters. Als die on
 - controleer of `allowed-ips` exact de peer-IP(s) bevat;
 - controleer endpoint/IP/DNS en of de tijd op beide servers correct is (NTP).
 
-### Twee masters koppelen (first-master + master)
+### Twee masters koppelen (master + master)
 
-De rol `first-master` en `master` installeren automatisch `haproxy`, schrijven direct werkende configuratie weg (`/etc/haproxy/haproxy.cfg`) en starten/enable'n de service meteen.
+De rol `master` installeert automatisch `haproxy`, schrijft direct werkende configuratie weg (`/etc/haproxy/haproxy.cfg`) en start/enable't de service meteen.
 Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-plane-endpoint`:
 
-- `first-master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
 - `master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
 
 - HAProxy backend defaults:
-  - `first-master`: `10.0.0.1:6443` (of `${WIREGUARD_SERVER_IP}:6443`)
-  - `master`: `10.0.0.2:6443` (of `${WIREGUARD_SERVER_IP}:6443`)
+  - `master`: `10.0.0.1:6443` t/m `10.0.0.9:6443`
   - optioneel te overschrijven met `CONTROL_PLANE_BACKENDS` (comma-separated)
 
 > ⚠️ **Belangrijk voor een werkende opzet**
@@ -363,8 +359,8 @@ Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-pl
 > Gebruik op **beide** masters altijd exact hetzelfde endpoint (standaard `10.0.0.100`) en stel backends expliciet in. Voorbeeld:
 >
 > ```bash
-> # first-master
-> CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2 bash scripts/roles/first-master/apply.sh
+> # eerste master
+> CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2 bash scripts/roles/master/apply.sh
 >
 > # tweede master
 > CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2 bash scripts/roles/master/apply.sh
@@ -373,22 +369,22 @@ Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-pl
 > Let op de LB-poort: HAProxy bindt hier bewust op `7443` om poortconflict met lokale kube-apiserver (`6443`) op master nodes te vermijden.
 > Gebruik daarom kubeadm/join tegen `<VIP>:7443`.
 
-De install scripts bereiden nodes voor, maar starten cluster init/join niet automatisch.
+De install scripts bereiden nodes voor, maar starten cluster `init`/`join` niet automatisch.
 Gebruik na installatie:
 
-1. Op **first-master**:
+1. Op **eerste master**:
 
 ```bash
 sudo kubeadm init --control-plane-endpoint "<VIP_OF_LB>:7443" --upload-certs --pod-network-cidr=10.244.0.0/16
 ```
 
-2. Op **first-master**, CNI toepassen (default flannel):
+2. Op **eerste master**, CNI toepassen (default flannel):
 
 ```bash
 sudo CNI_PLUGIN=flannel bash scripts/kubernetes/70_cni.sh
 ```
 
-3. Op **first-master**, join info ophalen:
+3. Op **eerste master**, join info ophalen:
 
 ```bash
 kubeadm token create --print-join-command
@@ -401,7 +397,7 @@ kubeadm init phase upload-certs --upload-certs
 sudo kubeadm join <VIP_OF_LB>:7443 --token <TOKEN> --discovery-token-ca-cert-hash sha256:<HASH> --control-plane --certificate-key <CERT_KEY>
 ```
 
-5. Controleren op first-master:
+5. Controleren op de eerste master:
 
 ```bash
 kubectl get nodes -o wide
