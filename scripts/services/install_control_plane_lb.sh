@@ -69,11 +69,24 @@ detect_keepalived_interface() {
 }
 
 derive_keepalived_defaults() {
-  local first_backend
-  first_backend="$(echo "${backend_ips[0]:-}" | xargs)"
+  local local_index=-1
+  local i
+  for i in "${!backend_ips[@]}"; do
+    local candidate_ip
+    candidate_ip="$(echo "${backend_ips[$i]}" | xargs)"
+    if [[ -n "${candidate_ip}" && "${candidate_ip}" == "${KEEPALIVED_LOCAL_IP}" ]]; then
+      local_index="${i}"
+      break
+    fi
+  done
+
+  if (( local_index < 0 )); then
+    echo "[SERVICES:${ROLE_NAME}] FOUT: KEEPALIVED_LOCAL_IP (${KEEPALIVED_LOCAL_IP}) staat niet in CONTROL_PLANE_BACKENDS (${CONTROL_PLANE_BACKENDS})." >&2
+    exit 1
+  fi
 
   if [[ -z "${KEEPALIVED_STATE}" ]]; then
-    if [[ -n "${KEEPALIVED_LOCAL_IP}" && "${KEEPALIVED_LOCAL_IP}" == "${first_backend}" ]]; then
+    if (( local_index == 0 )); then
       KEEPALIVED_STATE="MASTER"
     else
       KEEPALIVED_STATE="BACKUP"
@@ -81,11 +94,11 @@ derive_keepalived_defaults() {
   fi
 
   if [[ -z "${KEEPALIVED_PRIORITY}" ]]; then
-    if [[ "${KEEPALIVED_STATE}" == "MASTER" ]]; then
-      KEEPALIVED_PRIORITY="150"
-    else
-      KEEPALIVED_PRIORITY="100"
+    local derived_priority=$((150 - (local_index * 10)))
+    if (( derived_priority < 50 )); then
+      derived_priority=50
     fi
+    KEEPALIVED_PRIORITY="${derived_priority}"
   fi
 }
 
