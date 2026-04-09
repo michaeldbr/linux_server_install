@@ -128,23 +128,13 @@ Doel: node voorbereiden zodat Kubernetes kan draaien.
   - Kubernetes apt repo toevoegen
   - `kubelet`, `kubeadm`, `kubectl` installeren en op hold zetten
 
-### Control-plane endpoint service (haproxy + keepalived, out-of-the-box voor masters)
+### Control-plane endpoint service (haproxy)
 
 Voor rol `master` wordt `scripts/services/install_control_plane_lb.sh` aangeroepen.
-Dit script installeert en start standaard zowel `haproxy` als `keepalived`.
+Dit script installeert en start `haproxy`.
 
 - Standaard endpoint: `CONTROL_PLANE_ENDPOINT=10.0.0.100`
 - Standaard HAProxy bindpoort: `HAPROXY_BIND_PORT=7443`
-- Keepalived defaults:
-  - `KEEPALIVED_ENABLED=true`
-  - `KEEPALIVED_ROUTER_ID=51`
-  - `KEEPALIVED_AUTH_PASS=K8sHA001` (max 8 chars door keepalived PASS auth)
-  - `KEEPALIVED_INTERFACE` wordt automatisch gedetecteerd (voorkeur `wg0`)
-  - `KEEPALIVED_LOCAL_IP` default: `${WIREGUARD_SERVER_IP}`
-  - `KEEPALIVED_STATE` en `KEEPALIVED_PRIORITY` worden automatisch bepaald:
-    - node met eerste backend-IP => `MASTER`
-    - overige nodes => `BACKUP`
-    - priority volgt backend-volgorde: `150`, `140`, `130`, ...
 - `CONTROL_PLANE_BACKENDS` default:
   - `master`: `10.0.0.1,10.0.0.2,10.0.0.3`
   - andere rollen: `${WIREGUARD_SERVER_IP}` (indien gezet)
@@ -356,7 +346,7 @@ Je ziet dan o.a. `latest handshake` en oplopende `transfer` counters. Als die on
 
 ### Drie masters koppelen (master + master + master)
 
-De rol `master` installeert automatisch `haproxy` én `keepalived`, schrijft direct werkende configuraties weg (`/etc/haproxy/haproxy.cfg` en `/etc/keepalived/keepalived.conf`) en start/enable't beide services meteen.
+De rol `master` installeert automatisch `haproxy`, schrijft direct een werkende configuratie weg (`/etc/haproxy/haproxy.cfg`) en start/enable't de service meteen.
 Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-plane-endpoint`:
 
 - `master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
@@ -382,11 +372,6 @@ Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-pl
 > CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2,10.0.0.3 bash scripts/roles/master/apply.sh
 > ```
 >
-> Keepalived kiest automatisch MASTER/BACKUP en priority op basis van `CONTROL_PLANE_BACKENDS`:
-> - positie 1: `MASTER` met priority `150`
-> - positie 2: `BACKUP` met priority `140`
-> - positie 3: `BACKUP` met priority `130`
->
 > Let op de LB-poort: HAProxy bindt hier bewust op `7443` om poortconflict met lokale kube-apiserver (`6443`) op master nodes te vermijden.
 > Gebruik daarom kubeadm/join tegen `<VIP>:7443`.
 
@@ -403,24 +388,6 @@ backend k8s_api_backend
     server master1 10.0.0.1:6443 check
     server master2 10.0.0.2:6443 check
     server master3 10.0.0.3:6443 check
-```
-
-Voorbeeld van de gegenereerde keepalived-config:
-
-```conf
-vrrp_instance VI_K8S_API {
-    state MASTER/BACKUP (auto)
-    interface wg0 (auto, indien aanwezig)
-    virtual_router_id 51
-    priority 150/140/130 (auto)
-    unicast_src_ip <WIREGUARD_SERVER_IP>
-    unicast_peer {
-        <andere master IP>
-    }
-    virtual_ipaddress {
-        10.0.0.100/32 dev wg0
-    }
-}
 ```
 
 De install scripts bereiden nodes voor, maar starten cluster `init`/`join` niet automatisch.
