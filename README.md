@@ -128,20 +128,13 @@ Doel: node voorbereiden zodat Kubernetes kan draaien.
   - Kubernetes apt repo toevoegen
   - `kubelet`, `kubeadm`, `kubectl` installeren en op hold zetten
 
-### Control-plane endpoint service (haproxy + keepalived)
+### Control-plane endpoint service (haproxy)
 
 Voor rol `master` wordt `scripts/services/install_control_plane_lb.sh` aangeroepen.
-Dit script installeert en start zowel `haproxy` als `keepalived`.
+Dit script installeert en start `haproxy`.
 
 - Standaard endpoint: `CONTROL_PLANE_ENDPOINT=10.0.0.100`
 - Standaard HAProxy bindpoort: `HAPROXY_BIND_PORT=7443`
-- Keepalived defaults:
-  - `KEEPALIVED_ROUTER_ID=51`
-  - `KEEPALIVED_PRIORITY=150`
-  - `KEEPALIVED_STATE=BACKUP`
-  - `KEEPALIVED_AUTH_PASS=K8sHA001` (wordt afgekapt op 8 chars ivm keepalived PASS auth)
-  - `KEEPALIVED_INTERFACE` wordt automatisch gedetecteerd (of handmatig gezet)
-  - `KEEPALIVED_LOCAL_IP` default: `${WIREGUARD_SERVER_IP}`
 - `CONTROL_PLANE_BACKENDS` default:
   - `master`: `10.0.0.1,10.0.0.2,10.0.0.3`
   - andere rollen: `${WIREGUARD_SERVER_IP}` (indien gezet)
@@ -351,9 +344,9 @@ Je ziet dan o.a. `latest handshake` en oplopende `transfer` counters. Als die on
 - controleer of `allowed-ips` exact de peer-IP(s) bevat;
 - controleer endpoint/IP/DNS en of de tijd op beide servers correct is (NTP).
 
-### Twee masters koppelen (master + master)
+### Drie masters koppelen (master + master + master)
 
-De rol `master` installeert automatisch `haproxy` en `keepalived`, schrijft direct werkende configuraties weg (`/etc/haproxy/haproxy.cfg` en `/etc/keepalived/keepalived.conf`) en start/enable't beide services meteen.
+De rol `master` installeert automatisch `haproxy`, schrijft direct een werkende configuratie weg (`/etc/haproxy/haproxy.cfg`) en start/enable't de service meteen.
 Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-plane-endpoint`:
 
 - `master`: endpoint = `10.0.0.100` (tenzij je `CONTROL_PLANE_ENDPOINT` overschrijft)
@@ -362,53 +355,39 @@ Daarnaast wordt het endpoint opgeslagen in `/etc/linux-server-install/control-pl
   - `master`: `10.0.0.1:6443` t/m `10.0.0.3:6443`
   - optioneel te overschrijven met `CONTROL_PLANE_BACKENDS` (comma-separated)
 
-> ⚠️ **Belangrijk voor een werkende opzet**
+> ✅ **Out-of-the-box voor 3 masters**
 >
-> Gebruik op **beide** masters altijd exact hetzelfde endpoint (standaard `10.0.0.100`) en stel backends expliciet in. Voorbeeld:
+> Installeer op **master1**, **master2** en **master3** met exact hetzelfde endpoint en dezelfde backend-lijst.
+> Daarna hoef je alleen nog WireGuard peers te koppelen en `kubeadm join` uit te voeren.
+> Voorbeeld:
 >
 > ```bash
 > # eerste master
-> CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2 bash scripts/roles/master/apply.sh
+> CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2,10.0.0.3 bash scripts/roles/master/apply.sh
 >
 > # tweede master
-> CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2 bash scripts/roles/master/apply.sh
+> CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2,10.0.0.3 bash scripts/roles/master/apply.sh
+>
+> # derde master
+> CONTROL_PLANE_ENDPOINT=10.0.0.100 CONTROL_PLANE_BACKENDS=10.0.0.1,10.0.0.2,10.0.0.3 bash scripts/roles/master/apply.sh
 > ```
 >
 > Let op de LB-poort: HAProxy bindt hier bewust op `7443` om poortconflict met lokale kube-apiserver (`6443`) op master nodes te vermijden.
 > Gebruik daarom kubeadm/join tegen `<VIP>:7443`.
 
-Voorbeeld van de gegenereerde keepalived-config:
+Voorbeeld van de gegenereerde HAProxy-config:
 
 ```conf
-global_defs {
-    router_id master_<hostname>
-}
+frontend k8s_api_frontend
+    bind *:7443
+    default_backend k8s_api_backend
 
-vrrp_script chk_haproxy {
-    script "pidof haproxy"
-    interval 2
-    fall 2
-    rise 2
-}
-
-vrrp_instance VI_K8S_API {
-    state BACKUP
-    interface <auto-detected-of-KEEPALIVED_INTERFACE>
-    virtual_router_id 51
-    priority 150
-    advert_int 1
-    # Optioneel unicast_src_ip + unicast_peer block als KEEPALIVED_LOCAL_IP en peers bekend zijn
-    authentication {
-        auth_type PASS
-        auth_pass K8sHA001
-    }
-    virtual_ipaddress {
-        10.0.0.100/32 dev <interface>
-    }
-    track_script {
-        chk_haproxy
-    }
-}
+backend k8s_api_backend
+    option tcp-check
+    default-server inter 2s fall 3 rise 2
+    server master1 10.0.0.1:6443 check
+    server master2 10.0.0.2:6443 check
+    server master3 10.0.0.3:6443 check
 ```
 
 De install scripts bereiden nodes voor, maar starten cluster `init`/`join` niet automatisch.
