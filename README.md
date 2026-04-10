@@ -28,6 +28,7 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Zet SSH op poort `40111`.
 - Zet root login via SSH uit.
 - Installeert de gevraagde iptables regels.
+- Staat FORWARD verkeer voor Kubernetes intern subnet `10.0.0.0/24` expliciet toe.
 - Schakelt IPv6 uit via sysctl.
 - Installeert WireGuard na de firewall-stap en maakt automatisch een werkende `wg0` configuratie aan (met `WG_ADDRESS=${INTERNAL_IP}/24`).
 - Genereert server keys in `/etc/wireguard` en start `wg-quick@wg0`.

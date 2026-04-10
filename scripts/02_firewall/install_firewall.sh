@@ -76,6 +76,10 @@ iptables -A INPUT -s 10.0.0.0/24 -j LOG_ACCEPT
 # alles wat overblijft
 iptables -A INPUT -j LOG_DROP
 
+# Kubernetes / interne forwarding toestaan
+iptables -A FORWARD -s 10.0.0.0/24 -j ACCEPT
+iptables -A FORWARD -d 10.0.0.0/24 -j ACCEPT
+
 # IPv6 uitschakelen
 cat > /etc/sysctl.d/99-disable-ipv6.conf <<'SYSCTL'
 net.ipv6.conf.all.disable_ipv6 = 1
