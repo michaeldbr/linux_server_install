@@ -57,7 +57,7 @@ fetch_scripts_if_needed() {
     return 0
   fi
 
-  echo "Lokale scripts niet gevonden. Repo wordt opgehaald vanuit: ${REPO_URL} (branch: ${BRANCH})"
+  echo "Lokale scripts niet gevonden. Repo wordt opgehaald vanuit: ${REPO_URL} (branch: ${BRANCH})" >&2
   install_git_if_needed
 
   TMP_REPO_DIR="$(mktemp -d)"
@@ -218,9 +218,9 @@ ask_internal_ip() {
 ask_role() {
   local role_choice
   while true; do
-    echo "Kies de role:"
-    echo "1) master"
-    echo "2) worker"
+    echo "Kies de role:" >&2
+    echo "1) master" >&2
+    echo "2) worker" >&2
     role_choice="$(ask_twice_match 'Voer 1 of 2 in: ')"
 
     case "$role_choice" in
