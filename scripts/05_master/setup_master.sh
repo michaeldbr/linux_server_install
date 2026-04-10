@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+sed -i '/k8s-api.internal/d' /etc/hosts
+echo "127.0.0.1 k8s-api.internal" >> /etc/hosts
+
 set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +18,7 @@ write_kubeadm_config() {
   cat > "$KUBEADM_CONFIG_FILE" <<'YAML'
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
-controlPlaneEndpoint: "10.0.0.1:6443"
+controlPlaneEndpoint: "k8s-api.internal:6443"
 networking:
   podSubnet: "10.244.0.0/16"
 YAML

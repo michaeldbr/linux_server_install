@@ -314,7 +314,10 @@ echo "Stap netwerk-check afgerond ✔️"
 
 INTERNAL_IP="$INTERNAL_IP" "$WIREGUARD_SCRIPT"
 echo "Stap WireGuard afgerond ✔️"
-
+echo "Controle onderlinge connectiviteit..."
+ping -c 2 10.0.0.1 || true
+ping -c 2 10.0.0.2 || true
+ping -c 2 10.0.0.3 || true
 check_wireguard_ready
 echo "Stap WireGuard-check afgerond ✔️"
 

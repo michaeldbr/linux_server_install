@@ -129,9 +129,9 @@ REPO
   fi
 
   mkdir -p /etc/default
-  cat > /etc/default/kubelet <<'KUBELET'
-KUBELET_EXTRA_ARGS=--cgroup-driver=systemd
-KUBELET
+ cat > /etc/default/kubelet <<EOF
+KUBELET_EXTRA_ARGS=--cgroup-driver=systemd --node-ip=${INTERNAL_IP}
+EOF
 
   systemctl enable --now kubelet
 }
@@ -144,3 +144,5 @@ install_kubernetes_tools
 
 echo "Containerd, tijdsync en Kubernetes tools installatie gereed."
 echo "Geïnstalleerd: chrony/systemd-timesyncd, containerd, kubeadm, kubelet, kubectl"
+
+systemctl restart kubelet

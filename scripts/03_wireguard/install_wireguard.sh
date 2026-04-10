@@ -54,9 +54,21 @@ write_config_if_missing() {
 Address = ${WG_ADDRESS}
 ListenPort = ${WG_PORT}
 PrivateKey = ${private_key}
-SaveConfig = true
+
 PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -A FORWARD -o wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o ${DEFAULT_IFACE:-eth0} ! -d 10.244.0.0/16 -j MASQUERADE
 PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -D FORWARD -o wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o ${DEFAULT_IFACE:-eth0} ! -d 10.244.0.0/16 -j MASQUERADE
+
+[Peer]
+PublicKey = XXXXXXXXX
+AllowedIPs = 10.0.0.2/32
+Endpoint = 215.256:51820
+PersistentKeepalive = 25
+
+[Peer]
+PublicKey = XXXXXXXXXXx
+AllowedIPs = 10.0.0.3/32
+Endpoint = 25.58:51820
+PersistentKeepalive = 25
 CFG
     chmod 600 "$WG_CONF"
   fi
