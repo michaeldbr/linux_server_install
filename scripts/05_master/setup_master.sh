@@ -3,11 +3,39 @@ set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HAPROXY_SCRIPT="${BASE_DIR}/install_haproxy.sh"
+KUBEADM_CONFIG_FILE="/etc/kubernetes/kubeadm-config.yaml"
 
 if [[ ! -x "$HAPROXY_SCRIPT" ]]; then
   echo "HAProxy script ontbreekt of is niet uitvoerbaar: $HAPROXY_SCRIPT" >&2
   exit 1
 fi
+
+write_kubeadm_config() {
+  mkdir -p /etc/kubernetes
+  cat > "$KUBEADM_CONFIG_FILE" <<'YAML'
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+controlPlaneEndpoint: "10.0.0.1:6443"
+networking:
+  podSubnet: "10.244.0.0/16"
+YAML
+}
+
+create_join_script() {
+  local join_cmd cert_key
+
+  join_cmd="$(kubeadm token create --print-join-command)"
+  cert_key="$(kubeadm init phase upload-certs --upload-certs | tail -n 1)"
+
+  cat > /root/join.sh <<JOIN
+#!/usr/bin/env bash
+set -euo pipefail
+${join_cmd} --control-plane --certificate-key ${cert_key}
+JOIN
+
+  chmod 700 /root/join.sh
+  echo "Join script aangemaakt: /root/join.sh"
+}
 
 run_kubeadm_init_if_first_master() {
   if [[ "${FIRST_MASTER:-nee}" != "ja" ]]; then
@@ -15,21 +43,17 @@ run_kubeadm_init_if_first_master() {
     return 0
   fi
 
-  if [[ -z "${INTERNAL_IP:-}" ]]; then
-    echo "INTERNAL_IP ontbreekt voor kubeadm init." >&2
-    exit 1
-  fi
-
   if [[ -f /etc/kubernetes/admin.conf ]]; then
     echo "Kubernetes master lijkt al geinitialiseerd (/etc/kubernetes/admin.conf bestaat al)."
     return 0
   fi
 
-  echo "Start kubeadm init met control-plane endpoint k8s-api.internal:6443..."
-  kubeadm init \
-    --control-plane-endpoint "k8s-api.internal:6443" \
-    --apiserver-advertise-address="${INTERNAL_IP}" \
-    --pod-network-cidr=10.244.0.0/16
+  write_kubeadm_config
+
+  echo "Start kubeadm init met control-plane endpoint 10.0.0.1:6443..."
+  kubeadm init --config "$KUBEADM_CONFIG_FILE" --upload-certs
+
+  create_join_script
 
   echo "kubeadm init voltooid."
 }

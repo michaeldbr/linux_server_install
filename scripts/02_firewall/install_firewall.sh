@@ -84,6 +84,8 @@ iptables -A INPUT -j LOG_DROP
 # Kubernetes / interne forwarding toestaan
 iptables -A FORWARD -s 10.0.0.0/24 -j ACCEPT
 iptables -A FORWARD -d 10.0.0.0/24 -j ACCEPT
+iptables -A FORWARD -s 10.244.0.0/16 -j ACCEPT
+iptables -A FORWARD -d 10.244.0.0/16 -j ACCEPT
 
 # IPv6 firewall toepassen (established accept, daarna drop)
 ip6tables -F

@@ -19,6 +19,7 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - `scripts/04_kubernetes/install_kubernetes.sh`: containerd + `kubeadm`, `kubelet`, `kubectl` installatie en config.
 - `scripts/05_master/install_haproxy.sh`: installeert/configureert HAProxy voor masters (`k8s-api.internal:6443`).
 - `scripts/05_master/setup_master.sh`: role-specifieke master setup met `kubeadm init` en cluster post-init.
+- `scripts/06_checks/check_etcd.sh`: basiscontrole voor control-plane endpoints en componentstatus.
 
 ## Wat doet het script?
 
@@ -31,13 +32,15 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Zet SSH op poort `40111`.
 - Zet root login via SSH uit.
 - Installeert de gevraagde iptables regels.
-- Staat FORWARD verkeer voor Kubernetes intern subnet `10.0.0.0/24` expliciet toe.
+- Staat FORWARD verkeer voor Kubernetes intern subnet `10.0.0.0/24` en pod CIDR `10.244.0.0/16` expliciet toe.
 - Past ook IPv6 firewall regels toe (established eerst accept, daarna drop).
-- Installeert WireGuard na de firewall-stap en maakt automatisch een werkende `wg0` configuratie aan (met `WG_ADDRESS=${INTERNAL_IP}/24`).
+- Installeert WireGuard na de firewall-stap en maakt automatisch een werkende `wg0` configuratie aan (met `WG_ADDRESS=${INTERNAL_IP}/24`) zonder MASQUERADE NAT.
 - Genereert server keys in `/etc/wireguard` en start `wg-quick@wg0`.
 - Installeert containerd, zet de systemd cgroup driver aan, en installeert `kubeadm`, `kubelet` en `kubectl`.
 - Controleert na firewall of netwerk/DNS klaar is voordat WireGuard/Kubernetes doorgaat.
 - Controleert of WireGuard (`wg-quick@wg0` + interface `wg0`) echt actief is.
 - Controleert na Kubernetes installatie of `kubelet` actief en healthy is.
+- Controleert na master setup de API (`kubectl get nodes`) en voert etcd/control-plane basischeck uit.
 - Logt na elke installatiestap expliciet `Stap ... afgerond ✔️` voor debugging.
-- Voert op de eerste master automatisch `kubeadm init` uit, zet `/home/michael/.kube/config`, en applyt Flannel CNI.
+- Voert op de eerste master `kubeadm init --control-plane-endpoint "10.0.0.1:6443" --upload-certs --pod-network-cidr=10.244.0.0/16` uit, zet `/home/michael/.kube/config`, en applyt Flannel CNI.
+- Genereert op eerste master `/root/join.sh`; op extra masters (`FIRST_MASTER=nee`) wordt dit join script uitgevoerd voor control-plane join.

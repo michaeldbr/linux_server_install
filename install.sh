@@ -44,8 +44,9 @@ fetch_scripts_if_needed() {
   local k8s_script_local="${BASE_DIR}/scripts/04_kubernetes/install_kubernetes.sh"
   local master_script_local="${BASE_DIR}/scripts/05_master/setup_master.sh"
   local haproxy_script_local="${BASE_DIR}/scripts/05_master/install_haproxy.sh"
+  local etcd_check_script_local="${BASE_DIR}/scripts/06_checks/check_etcd.sh"
 
-  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$master_script_local" && -x "$haproxy_script_local" ]]; then
+  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$master_script_local" && -x "$haproxy_script_local" && -x "$etcd_check_script_local" ]]; then
     echo "$BASE_DIR"
     return 0
   fi
@@ -56,7 +57,7 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/04_kubernetes/install_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/setup_master.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/install_haproxy.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/04_kubernetes/install_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/setup_master.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/install_haproxy.sh" || ! -x "$TMP_REPO_DIR/scripts/06_checks/check_etcd.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi
@@ -128,6 +129,17 @@ check_kubelet_healthy() {
     fi
   else
     echo "Geen curl/wget beschikbaar voor kubelet health check." >&2
+    exit 1
+  fi
+}
+
+check_k8s_api() {
+  if [[ ! -f /etc/kubernetes/admin.conf ]]; then
+    return 0
+  fi
+
+  if ! su - michael -c "kubectl get nodes" >/dev/null 2>&1; then
+    echo "API niet bereikbaar" >&2
     exit 1
   fi
 }
@@ -240,6 +252,7 @@ FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/02_firewall/install_firewall.sh"
 WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/03_wireguard/install_wireguard.sh"
 KUBERNETES_SCRIPT="${SCRIPT_ROOT}/scripts/04_kubernetes/install_kubernetes.sh"
 MASTER_SCRIPT="${SCRIPT_ROOT}/scripts/05_master/setup_master.sh"
+ETCD_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/06_checks/check_etcd.sh"
 
 INTERNAL_IP="$(ask_internal_ip)"
 ROLE="$(ask_role)"
@@ -286,6 +299,21 @@ echo "Stap kubelet-check afgerond ✔️"
 if [[ "$ROLE" == "master" ]]; then
   INTERNAL_IP="$INTERNAL_IP" FIRST_MASTER="$FIRST_MASTER" "$MASTER_SCRIPT"
   echo "Stap master-setup afgerond ✔️"
+
+  if [[ "$FIRST_MASTER" == "nee" ]]; then
+    if [[ ! -x /root/join.sh ]]; then
+      echo "Join script ontbreekt: /root/join.sh" >&2
+      exit 1
+    fi
+    bash /root/join.sh
+    echo "Stap control-plane join afgerond ✔️"
+  fi
+
+  check_k8s_api
+  echo "Stap API-check afgerond ✔️"
+
+  "$ETCD_CHECK_SCRIPT"
+  echo "Stap etcd/control-plane check afgerond ✔️"
 fi
 
 echo "Installatie afgerond."
