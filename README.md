@@ -33,3 +33,6 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Installeert WireGuard na de firewall-stap en maakt automatisch een werkende `wg0` configuratie aan (met `WG_ADDRESS=${INTERNAL_IP}/24`).
 - Genereert server keys in `/etc/wireguard` en start `wg-quick@wg0`.
 - Installeert containerd, zet de systemd cgroup driver aan, en installeert `kubeadm`, `kubelet` en `kubectl`.
+- Controleert na firewall of netwerk/DNS klaar is voordat WireGuard/Kubernetes doorgaat.
+- Controleert of WireGuard (`wg-quick@wg0` + interface `wg0`) echt actief is.
+- Controleert na Kubernetes installatie of `kubelet` actief en healthy is.

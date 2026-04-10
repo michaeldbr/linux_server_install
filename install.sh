@@ -62,6 +62,74 @@ fetch_scripts_if_needed() {
   echo "$TMP_REPO_DIR"
 }
 
+retry() {
+  local attempts="$1"
+  local delay="$2"
+  shift 2
+
+  local i
+  for ((i=1; i<=attempts; i++)); do
+    if "$@"; then
+      return 0
+    fi
+    sleep "$delay"
+  done
+
+  return 1
+}
+
+check_network_ready() {
+  echo "Controle netwerkbereikbaarheid..."
+
+  if ! retry 10 3 getent hosts pkgs.k8s.io >/dev/null 2>&1; then
+    echo "Netwerk/DNS niet klaar: pkgs.k8s.io kan niet worden resolved." >&2
+    exit 1
+  fi
+
+  if ! retry 10 3 ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1; then
+    echo "Netwerk niet klaar: geen internet connectiviteit naar 1.1.1.1." >&2
+    exit 1
+  fi
+}
+
+check_wireguard_ready() {
+  echo "Controle WireGuard status..."
+
+  if ! retry 10 3 systemctl is-active --quiet wg-quick@wg0; then
+    echo "WireGuard service wg-quick@wg0 is niet actief." >&2
+    exit 1
+  fi
+
+  if ! retry 10 3 wg show wg0 >/dev/null 2>&1; then
+    echo "WireGuard interface wg0 is niet beschikbaar." >&2
+    exit 1
+  fi
+}
+
+check_kubelet_healthy() {
+  echo "Controle kubelet health..."
+
+  if ! retry 20 3 systemctl is-active --quiet kubelet; then
+    echo "kubelet service is niet actief." >&2
+    exit 1
+  fi
+
+  if command -v curl >/dev/null 2>&1; then
+    if ! retry 20 3 curl -fsS http://127.0.0.1:10248/healthz >/dev/null 2>&1; then
+      echo "kubelet health endpoint is niet healthy (http://127.0.0.1:10248/healthz)." >&2
+      exit 1
+    fi
+  elif command -v wget >/dev/null 2>&1; then
+    if ! retry 20 3 wget -qO- http://127.0.0.1:10248/healthz >/dev/null 2>&1; then
+      echo "kubelet health endpoint is niet healthy (http://127.0.0.1:10248/healthz)." >&2
+      exit 1
+    fi
+  else
+    echo "Geen curl/wget beschikbaar voor kubelet health check." >&2
+    exit 1
+  fi
+}
+
 ask_twice_match() {
   local prompt="$1"
   local first second
@@ -165,7 +233,10 @@ echo "Role opgeslagen in /etc/linux_server_role"
 
 "$SSH_SCRIPT"
 "$FIREWALL_SCRIPT"
+check_network_ready
 INTERNAL_IP="$INTERNAL_IP" "$WIREGUARD_SCRIPT"
+check_wireguard_ready
 "$KUBERNETES_SCRIPT"
+check_kubelet_healthy
 
 echo "Installatie afgerond."
