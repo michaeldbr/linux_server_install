@@ -2,15 +2,32 @@
 set -euo pipefail
 
 ROLE_NAME="master"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CONTROL_PLANE_ENDPOINT="${CONTROL_PLANE_ENDPOINT:-k8s-api.local}"
 HAPROXY_BIND_PORT="${HAPROXY_BIND_PORT:-7443}"
 POD_NETWORK_CIDR="${POD_NETWORK_CIDR:-10.244.0.0/16}"
 KUBEADM_JOIN_PATH="${KUBEADM_JOIN_PATH:-/root/kubeadm_join.sh}"
+BOOTSTRAP_MASTER="${BOOTSTRAP_MASTER:-auto}"
 
-if [[ "${WIREGUARD_SERVER_IP:-}" != "10.0.0.1" ]]; then
-  echo "[ROLE:${ROLE_NAME}] kubeadm init niet nodig: intern IP is ${WIREGUARD_SERVER_IP:-onbekend}."
+should_bootstrap=false
+case "${BOOTSTRAP_MASTER}" in
+  true|TRUE|1|yes|YES|on|ON)
+    should_bootstrap=true
+    ;;
+  false|FALSE|0|no|NO|off|OFF)
+    should_bootstrap=false
+    ;;
+  auto)
+    [[ "${WIREGUARD_SERVER_IP:-}" == "10.0.0.1" ]] && should_bootstrap=true
+    ;;
+  *)
+    echo "[ROLE:${ROLE_NAME}] FOUT: ongeldige BOOTSTRAP_MASTER='${BOOTSTRAP_MASTER}' (gebruik true|false|auto)." >&2
+    exit 1
+    ;;
+esac
+
+if [[ "${should_bootstrap}" != "true" ]]; then
+  echo "[ROLE:${ROLE_NAME}] kubeadm init overgeslagen (BOOTSTRAP_MASTER=${BOOTSTRAP_MASTER}, intern IP=${WIREGUARD_SERVER_IP:-onbekend})."
   exit 0
 fi
 
@@ -24,7 +41,7 @@ if [[ ! -S /run/containerd/containerd.sock ]]; then
   exit 1
 fi
 
-echo "[ROLE:${ROLE_NAME}] kubeadm init starten op eerste master (${WIREGUARD_SERVER_IP})..."
+echo "[ROLE:${ROLE_NAME}] kubeadm init starten op bootstrap master (${WIREGUARD_SERVER_IP})..."
 kubeadm init \
   --control-plane-endpoint "${CONTROL_PLANE_ENDPOINT}:${HAPROXY_BIND_PORT}" \
   --upload-certs \

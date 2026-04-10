@@ -71,11 +71,35 @@ prompt_with_confirmation() {
   done
 }
 
+validate_non_interactive_input() {
+  local ip="${WIREGUARD_SERVER_IP:-}"
+  local role="${SERVER_ROLE:-}"
+  local hostname="${TARGET_HOSTNAME:-}"
+
+  [[ -n "${ip}" && -n "${role}" && -n "${hostname}" ]] || return 1
+  validate_internal_ip "${ip}" || return 1
+  validate_role "${role}" || return 1
+  validate_hostname "${hostname}" || return 1
+}
+
 collect_install_input() {
   local tty_fd
 
+  if validate_non_interactive_input; then
+    echo "[PRE-FLIGHT] Non-interactive input gedetecteerd via environment variables."
+    export WIREGUARD_SERVER_IP SERVER_ROLE TARGET_HOSTNAME
+    return 0
+  fi
+
+  if [[ "${INSTALL_NON_INTERACTIVE:-false}" == "true" ]]; then
+    echo "[PRE-FLIGHT] FOUT: INSTALL_NON_INTERACTIVE=true maar input is onvolledig/ongeldig." >&2
+    echo "[PRE-FLIGHT] Vereist: WIREGUARD_SERVER_IP, SERVER_ROLE (master|worker|traffic), TARGET_HOSTNAME." >&2
+    return 1
+  fi
+
   if [[ ! -r /dev/tty || ! -w /dev/tty ]]; then
     echo "[PRE-FLIGHT] FOUT: Interactieve input is niet mogelijk (/dev/tty ontbreekt)." >&2
+    echo "[PRE-FLIGHT] Geef non-interactive input mee via env vars." >&2
     return 1
   fi
 

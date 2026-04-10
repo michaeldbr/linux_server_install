@@ -2,6 +2,8 @@
 set -euo pipefail
 
 CNI_PLUGIN="${CNI_PLUGIN:-flannel}"
+CNI_FLANNEL_VERSION="${CNI_FLANNEL_VERSION:-v0.27.4}"
+CNI_CALICO_VERSION="${CNI_CALICO_VERSION:-v3.28.2}"
 KUBECONFIG_PATH="${KUBECONFIG:-/etc/kubernetes/admin.conf}"
 
 if ! command -v kubectl >/dev/null 2>&1; then
@@ -28,8 +30,8 @@ install_flannel() {
     return 0
   fi
 
-  echo "[CNI] Flannel installeren..."
-  kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+  echo "[CNI] Flannel installeren (${CNI_FLANNEL_VERSION})..."
+  kubectl apply -f "https://github.com/flannel-io/flannel/releases/download/${CNI_FLANNEL_VERSION}/kube-flannel.yml"
 }
 
 install_calico() {
@@ -38,8 +40,8 @@ install_calico() {
     return 0
   fi
 
-  echo "[CNI] Calico installeren..."
-  kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/calico.yaml
+  echo "[CNI] Calico installeren (${CNI_CALICO_VERSION})..."
+  kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${CNI_CALICO_VERSION}/manifests/calico.yaml"
 }
 
 case "${CNI_PLUGIN}" in
