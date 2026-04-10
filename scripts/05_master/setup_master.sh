@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
+sed -i '/k8s-api.internal/d' /etc/hosts
+
 echo "10.0.0.1 k8s-api.internal" >> /etc/hosts
-echo "10.0.0.2 k8s-api.internal" >> /etc/hosts
-echo "10.0.0.3 k8s-api.internal" >> /etc/hosts
 
 set -euo pipefail
 
