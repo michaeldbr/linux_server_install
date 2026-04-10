@@ -27,6 +27,13 @@ configure_hosts() {
 }
 
 configure_haproxy() {
+  if [[ -f /etc/haproxy/haproxy.cfg ]] && grep -q "k8s-api.internal" /etc/haproxy/haproxy.cfg; then
+    echo "Bestaande HAProxy config lijkt al correct; overslaan."
+    systemctl enable --now haproxy
+    systemctl restart haproxy
+    return 0
+  fi
+
   cat > /etc/haproxy/haproxy.cfg <<'CFG'
 global
   log /dev/log local0

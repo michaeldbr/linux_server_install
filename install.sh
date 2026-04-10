@@ -45,8 +45,9 @@ fetch_scripts_if_needed() {
   local master_script_local="${BASE_DIR}/scripts/05_master/setup_master.sh"
   local haproxy_script_local="${BASE_DIR}/scripts/05_master/install_haproxy.sh"
   local etcd_check_script_local="${BASE_DIR}/scripts/06_checks/check_etcd.sh"
+  local logging_script_local="${BASE_DIR}/scripts/07_logging/install_fluentbit.sh"
 
-  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$master_script_local" && -x "$haproxy_script_local" && -x "$etcd_check_script_local" ]]; then
+  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$master_script_local" && -x "$haproxy_script_local" && -x "$etcd_check_script_local" && -x "$logging_script_local" ]]; then
     echo "$BASE_DIR"
     return 0
   fi
@@ -57,12 +58,32 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/04_kubernetes/install_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/setup_master.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/install_haproxy.sh" || ! -x "$TMP_REPO_DIR/scripts/06_checks/check_etcd.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/04_kubernetes/install_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/setup_master.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/install_haproxy.sh" || ! -x "$TMP_REPO_DIR/scripts/06_checks/check_etcd.sh" || ! -x "$TMP_REPO_DIR/scripts/07_logging/install_fluentbit.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi
 
   echo "$TMP_REPO_DIR"
+}
+
+
+check_minimum_resources() {
+  local min_cpu=2
+  local min_mem_kb=$((2 * 1024 * 1024))
+  local cpu_count mem_kb
+
+  cpu_count="$(nproc)"
+  mem_kb="$(awk '/MemTotal/ {print $2}' /proc/meminfo)"
+
+  if (( cpu_count < min_cpu )); then
+    echo "Onvoldoende CPU cores: minimaal ${min_cpu} vereist, gevonden ${cpu_count}." >&2
+    exit 1
+  fi
+
+  if (( mem_kb < min_mem_kb )); then
+    echo "Onvoldoende RAM: minimaal 2GB vereist." >&2
+    exit 1
+  fi
 }
 
 retry() {
@@ -253,6 +274,10 @@ WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/03_wireguard/install_wireguard.sh"
 KUBERNETES_SCRIPT="${SCRIPT_ROOT}/scripts/04_kubernetes/install_kubernetes.sh"
 MASTER_SCRIPT="${SCRIPT_ROOT}/scripts/05_master/setup_master.sh"
 ETCD_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/06_checks/check_etcd.sh"
+LOGGING_SCRIPT="${SCRIPT_ROOT}/scripts/07_logging/install_fluentbit.sh"
+
+check_minimum_resources
+echo "Stap resource-check afgerond ✔️"
 
 INTERNAL_IP="$(ask_internal_ip)"
 ROLE="$(ask_role)"
@@ -280,6 +305,9 @@ echo "Stap SSH afgerond ✔️"
 
 "$FIREWALL_SCRIPT"
 echo "Stap firewall afgerond ✔️"
+
+"$LOGGING_SCRIPT"
+echo "Stap logging-agent afgerond ✔️"
 
 check_network_ready
 echo "Stap netwerk-check afgerond ✔️"
