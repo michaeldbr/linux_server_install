@@ -83,6 +83,20 @@ run_kubeadm_init_if_first_master() {
   echo "kubeadm init voltooid."
 }
 
+
+check_api_server() {
+  if [[ ! -f /etc/kubernetes/admin.conf ]]; then
+    return 0
+  fi
+
+  echo "Controle API server..."
+
+  if ! su - michael -c "kubectl get nodes" >/dev/null 2>&1; then
+    echo "API server niet bereikbaar!" >&2
+    exit 1
+  fi
+}
+
 post_init_setup() {
   if [[ ! -f /etc/kubernetes/admin.conf ]]; then
     return 0
@@ -107,5 +121,6 @@ configure_hosts
 configure_haproxy
 run_kubeadm_init_if_first_master
 post_init_setup
+check_api_server
 
-echo "Master setup voltooid: hosts + HAProxy + (optioneel) kubeadm init + kubeconfig/Flannel."
+echo "Master setup voltooid: hosts + HAProxy + (optioneel) kubeadm init + kubeconfig/Flannel + API check."

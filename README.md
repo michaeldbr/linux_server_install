@@ -38,4 +38,5 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Controleert na firewall of netwerk/DNS klaar is voordat WireGuard/Kubernetes doorgaat.
 - Controleert of WireGuard (`wg-quick@wg0` + interface `wg0`) echt actief is.
 - Controleert na Kubernetes installatie of `kubelet` actief en healthy is.
+- Logt na elke installatiestap expliciet `Stap ... afgerond ✔️` voor debugging.
 - Voert op de eerste master automatisch `kubeadm init` uit, zet `/home/michael/.kube/config`, en applyt Flannel CNI.

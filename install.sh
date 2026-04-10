@@ -262,15 +262,29 @@ echo "$ROLE" > /etc/linux_server_role
 echo "Role opgeslagen in /etc/linux_server_role"
 
 "$SSH_SCRIPT"
+echo "Stap SSH afgerond ✔️"
+
 "$FIREWALL_SCRIPT"
+echo "Stap firewall afgerond ✔️"
+
 check_network_ready
+echo "Stap netwerk-check afgerond ✔️"
+
 INTERNAL_IP="$INTERNAL_IP" "$WIREGUARD_SCRIPT"
+echo "Stap WireGuard afgerond ✔️"
+
 check_wireguard_ready
+echo "Stap WireGuard-check afgerond ✔️"
+
 "$KUBERNETES_SCRIPT"
+echo "Stap Kubernetes tools afgerond ✔️"
+
 check_kubelet_healthy
+echo "Stap kubelet-check afgerond ✔️"
 
 if [[ "$ROLE" == "master" ]]; then
   INTERNAL_IP="$INTERNAL_IP" FIRST_MASTER="$FIRST_MASTER" "$MASTER_SCRIPT"
+  echo "Stap master-setup afgerond ✔️"
 fi
 
 echo "Installatie afgerond."
