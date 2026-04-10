@@ -56,6 +56,8 @@ frontend k8s
 backend masters
   mode tcp
   option tcp-check
+  default-server inter 3s fall 3 rise 2
+
   server master1 10.0.0.1:6443 check
   server master2 10.0.0.2:6443 check
   server master3 10.0.0.3:6443 check
