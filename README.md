@@ -119,9 +119,8 @@ Doel: node voorbereiden zodat Kubernetes kan draaien.
 - Debug tools:
   - `crictl` (optioneel, indien package beschikbaar)
 - Rolgedrag:
-  - De installer voert **geen** `kubeadm init` of `kubeadm join` automatisch uit
-  - Gebruik rol `master` voor control-plane voorbereiding
-  - `kubeadm init` en `kubeadm join` voer je handmatig uit na de installatie
+  - Voor rol `master` met intern IP `10.0.0.1` voert de installer automatisch `kubeadm init` uit
+  - Voor alle andere nodes blijft cluster join handmatig (`kubeadm join`)
   - gebruikt `CONTROL_PLANE_ENDPOINT` + `HAPROXY_BIND_PORT` als control-plane endpoint
   - gebruikt `POD_NETWORK_CIDR=10.244.0.0/16` als default (overschrijfbaar via env)
 - Repositories/packages:
@@ -133,7 +132,7 @@ Doel: node voorbereiden zodat Kubernetes kan draaien.
 Voor rol `master` wordt `scripts/services/install_control_plane_lb.sh` aangeroepen.
 Dit script installeert en start `haproxy`.
 
-- Standaard endpoint: `CONTROL_PLANE_ENDPOINT=10.0.0.100`
+- Standaard endpoint: `CONTROL_PLANE_ENDPOINT=k8s-api.local`
 - Standaard HAProxy bindpoort: `HAPROXY_BIND_PORT=7443`
 - `CONTROL_PLANE_BACKENDS` default:
   - `master`: `10.0.0.1,10.0.0.2,10.0.0.3`

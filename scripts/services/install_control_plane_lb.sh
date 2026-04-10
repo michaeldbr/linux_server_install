@@ -68,11 +68,15 @@ defaults
     timeout client 60s
     timeout server 60s
 
-frontend k8s_api_frontend
+frontend k8s_api
     bind *:${HAPROXY_BIND_PORT}
-    default_backend k8s_api_backend
+    mode tcp
+    option tcplog
+    default_backend k8s_masters
 
-backend k8s_api_backend
+backend k8s_masters
+    mode tcp
+    balance roundrobin
     option tcp-check
     default-server inter 2s fall 3 rise 2
 $(printf '%s
@@ -80,7 +84,8 @@ $(printf '%s
 CFG
 
 chmod 0644 /etc/haproxy/haproxy.cfg
-systemctl enable --now haproxy
+systemctl restart haproxy
+systemctl enable haproxy
 
 install -d -m 0755 /etc/linux-server-install
 cat > /etc/linux-server-install/control-plane-endpoint <<CFG
