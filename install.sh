@@ -248,8 +248,8 @@ check_wireguard_ready
 "$KUBERNETES_SCRIPT"
 check_kubelet_healthy
 
-if [[ "$ROLE" == "master" && "$FIRST_MASTER" == "ja" ]]; then
-  "$MASTER_SCRIPT"
+if [[ "$ROLE" == "master" ]]; then
+  INTERNAL_IP="$INTERNAL_IP" FIRST_MASTER="$FIRST_MASTER" "$MASTER_SCRIPT"
 fi
 
 echo "Installatie afgerond."

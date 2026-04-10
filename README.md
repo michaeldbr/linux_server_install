@@ -17,7 +17,7 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - `scripts/02_firewall/install_firewall.sh`: iptables regels + IPv6 firewall toepassen.
 - `scripts/03_wireguard/install_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
 - `scripts/04_kubernetes/install_kubernetes.sh`: containerd + `kubeadm`, `kubelet`, `kubectl` installatie en config.
-- `scripts/05_master/setup_master.sh`: role-specifieke master init (`kubeadm init`).
+- `scripts/05_master/setup_master.sh`: role-specifieke master setup met `/etc/hosts`, lokale HAProxy en `kubeadm init`.
 
 ## Wat doet het script?
 
