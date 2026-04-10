@@ -60,6 +60,12 @@ PublicKey = PUBKEY_MASTER2
 AllowedIPs = 10.0.0.2/32
 Endpoint = PUBLIC_IP_MASTER2:51820
 PersistentKeepalive = 25
+
+[Peer]
+PublicKey = MASTER3_KEY
+AllowedIPs = 10.0.0.3/32
+Endpoint = IP3:51820
+PersistentKeepalive = 25
 PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -A FORWARD -o wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o ${DEFAULT_IFACE:-eth0} ! -d 10.244.0.0/16 -j MASQUERADE
 PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -D FORWARD -o wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o ${DEFAULT_IFACE:-eth0} ! -d 10.244.0.0/16 -j MASQUERADE
 CFG
