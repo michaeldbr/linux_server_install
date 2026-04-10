@@ -2,6 +2,7 @@
 set -euo pipefail
 
 K8S_CHANNEL="${K8S_CHANNEL:-v1.30}"
+TIMEZONE="${TIMEZONE:-Europe/Amsterdam}"
 
 install_chrony_if_needed() {
   if command -v chronyd >/dev/null 2>&1 || systemctl list-unit-files | grep -q '^systemd-timesyncd\.service'; then
@@ -34,6 +35,19 @@ enable_time_sync() {
     systemctl restart systemd-timesyncd
   else
     echo "Geen timesync service beschikbaar." >&2
+    exit 1
+  fi
+}
+
+configure_timezone_and_sync() {
+  if command -v timedatectl >/dev/null 2>&1; then
+    timedatectl set-timezone "$TIMEZONE"
+    timedatectl set-ntp true
+  elif [[ -e /usr/share/zoneinfo/$TIMEZONE ]]; then
+    ln -snf "/usr/share/zoneinfo/$TIMEZONE" /etc/localtime
+    echo "$TIMEZONE" > /etc/timezone
+  else
+    echo "Timezone $TIMEZONE niet gevonden op dit systeem." >&2
     exit 1
   fi
 }
@@ -138,11 +152,13 @@ EOF
 
 install_chrony_if_needed
 enable_time_sync
+configure_timezone_and_sync
 install_containerd
 configure_k8s_prereqs
 install_kubernetes_tools
 
-echo "Containerd, tijdsync en Kubernetes tools installatie gereed."
+echo "Containerd, tijdsync, timezone en Kubernetes tools installatie gereed."
 echo "Geïnstalleerd: chrony/systemd-timesyncd, containerd, kubeadm, kubelet, kubectl"
+echo "Timezone ingesteld op ${TIMEZONE}."
 
 systemctl restart kubelet

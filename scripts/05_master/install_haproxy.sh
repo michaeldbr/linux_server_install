@@ -1,23 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-install_haproxy_if_needed() {
+ensure_haproxy_present() {
   if command -v haproxy >/dev/null 2>&1; then
     return 0
   fi
 
-  if command -v apt-get >/dev/null 2>&1; then
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -y
-    apt-get install -y haproxy
-  elif command -v dnf >/dev/null 2>&1; then
-    dnf install -y haproxy
-  elif command -v yum >/dev/null 2>&1; then
-    yum install -y haproxy
-  else
-    echo "Geen ondersteunde package manager gevonden voor HAProxy." >&2
-    exit 1
-  fi
+  echo "HAProxy is niet geïnstalleerd; installatie wordt bewust overgeslagen." >&2
+  echo "Installeer HAProxy handmatig en draai dit script opnieuw." >&2
+  exit 1
 }
 
 configure_hosts() {
@@ -49,7 +40,7 @@ defaults
   timeout server  60s
 
 frontend k8s
-  bind 0.0.0.0:6443
+  bind 0.0.0.0:7443
   mode tcp
   default_backend masters
 
@@ -67,7 +58,7 @@ CFG
   systemctl restart haproxy
 }
 
-install_haproxy_if_needed
+ensure_haproxy_present
 configure_hosts
 configure_haproxy
 
