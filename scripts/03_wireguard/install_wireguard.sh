@@ -5,9 +5,14 @@ WG_DIR="/etc/wireguard"
 WG_CONF="${WG_DIR}/wg0.conf"
 WG_PRIVATE_KEY_FILE="${WG_DIR}/server_private.key"
 WG_PUBLIC_KEY_FILE="${WG_DIR}/server_public.key"
-WG_ADDRESS="10.0.0.1/24"
+WG_ADDRESS="${INTERNAL_IP}/24"
 WG_PORT="51820"
 DEFAULT_IFACE="$(ip route | awk '/default/ {print $5; exit}')"
+
+if [[ -z "${INTERNAL_IP:-}" ]]; then
+  echo "INTERNAL_IP ontbreekt. Start dit script via install.sh." >&2
+  exit 1
+fi
 
 install_wireguard() {
   if command -v apt-get >/dev/null 2>&1; then

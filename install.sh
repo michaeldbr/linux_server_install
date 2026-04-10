@@ -165,7 +165,7 @@ echo "Role opgeslagen in /etc/linux_server_role"
 
 "$SSH_SCRIPT"
 "$FIREWALL_SCRIPT"
-"$WIREGUARD_SCRIPT"
+INTERNAL_IP="$INTERNAL_IP" "$WIREGUARD_SCRIPT"
 "$KUBERNETES_SCRIPT"
 
 echo "Installatie afgerond."

@@ -29,6 +29,6 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Zet root login via SSH uit.
 - Installeert de gevraagde iptables regels.
 - Schakelt IPv6 uit via sysctl.
-- Installeert WireGuard na de firewall-stap en maakt automatisch een werkende `wg0` configuratie aan.
+- Installeert WireGuard na de firewall-stap en maakt automatisch een werkende `wg0` configuratie aan (met `WG_ADDRESS=${INTERNAL_IP}/24`).
 - Genereert server keys in `/etc/wireguard` en start `wg-quick@wg0`.
 - Installeert containerd, zet de systemd cgroup driver aan, en installeert `kubeadm`, `kubelet` en `kubectl`.
