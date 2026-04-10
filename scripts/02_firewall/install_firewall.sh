@@ -77,6 +77,9 @@ iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 iptables -A INPUT -p tcp --dport 40111 -j LOG_ACCEPT
 iptables -A INPUT -p udp --dport 51820 -j LOG_ACCEPT
 iptables -A INPUT -s 10.0.0.0/24 -j LOG_ACCEPT
+iptables -A INPUT -s 10.0.0.0/24 -j ACCEPT
+iptables -A FORWARD -s 10.0.0.0/24 -j ACCEPT
+iptables -A FORWARD -d 10.0.0.0/24 -j ACCEPT
 
 # Kubernetes control-plane en node poorten (intern)
 iptables -A INPUT -s 10.0.0.0/24 -p tcp --dport 6443 -j ACCEPT
