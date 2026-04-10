@@ -200,6 +200,27 @@ ask_role() {
   done
 }
 
+
+ask_first_master() {
+  local answer
+  while true; do
+    answer="$(ask_twice_match "Is dit de eerste master? (ja/nee) ")"
+    case "${answer,,}" in
+      ja)
+        printf "ja"
+        return 0
+        ;;
+      nee)
+        printf "nee"
+        return 0
+        ;;
+      *)
+        echo "Ongeldig antwoord. Gebruik ja of nee."
+        ;;
+    esac
+  done
+}
+
 ask_hostname() {
   local host
   while true; do
