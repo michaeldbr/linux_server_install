@@ -8,7 +8,12 @@ fi
 
 REPO_URL="${REPO_URL:-https://github.com/michaeldbr/linux_server_install.git}"
 BRANCH="${BRANCH:-main}"
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-}"
+if [[ -n "$SCRIPT_SOURCE" ]]; then
+  BASE_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+else
+  BASE_DIR="$(pwd)"
+fi
 TMP_REPO_DIR=""
 
 install_git_if_needed() {
