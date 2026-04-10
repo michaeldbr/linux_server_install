@@ -16,6 +16,11 @@ if ! command -v iptables >/dev/null 2>&1; then
   fi
 fi
 
+if ! command -v ip6tables >/dev/null 2>&1; then
+  echo "ip6tables ontbreekt; IPv6 firewall regels kunnen niet toegepast worden." >&2
+  exit 1
+fi
+
 # Reset bestaande regels voor idempotent gedrag
 iptables -F
 iptables -X LOG_ACCEPT 2>/dev/null || true
@@ -68,7 +73,7 @@ iptables -A LOG_DROP -j DROP
 # INPUT RULES
 # ========================
 iptables -A INPUT -i lo -j LOG_ACCEPT
-iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j LOG_ACCEPT
+iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 iptables -A INPUT -p tcp --dport 40111 -j LOG_ACCEPT
 iptables -A INPUT -p udp --dport 51820 -j LOG_ACCEPT
 iptables -A INPUT -s 10.0.0.0/24 -j LOG_ACCEPT
@@ -80,18 +85,26 @@ iptables -A INPUT -j LOG_DROP
 iptables -A FORWARD -s 10.0.0.0/24 -j ACCEPT
 iptables -A FORWARD -d 10.0.0.0/24 -j ACCEPT
 
-# IPv6 uitschakelen
-cat > /etc/sysctl.d/99-disable-ipv6.conf <<'SYSCTL'
-net.ipv6.conf.all.disable_ipv6 = 1
-net.ipv6.conf.default.disable_ipv6 = 1
-net.ipv6.conf.lo.disable_ipv6 = 1
-SYSCTL
-
-sysctl --system >/dev/null
+# IPv6 firewall toepassen (established accept, daarna drop)
+ip6tables -F
+ip6tables -P INPUT DROP
+ip6tables -P FORWARD DROP
+ip6tables -P OUTPUT ACCEPT
+ip6tables -A INPUT -i lo -j ACCEPT
+ip6tables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+ip6tables -A INPUT -p tcp --dport 40111 -j ACCEPT
+ip6tables -A INPUT -p udp --dport 51820 -j ACCEPT
+ip6tables -A INPUT -j DROP
+ip6tables -A FORWARD -j DROP
 
 if command -v iptables-save >/dev/null 2>&1; then
   mkdir -p /etc/iptables
   iptables-save > /etc/iptables/rules.v4
 fi
 
-echo "Firewall regels toegepast en IPv6 uitgeschakeld."
+if command -v ip6tables-save >/dev/null 2>&1; then
+  mkdir -p /etc/iptables
+  ip6tables-save > /etc/iptables/rules.v6
+fi
+
+echo "Firewall regels toegepast voor IPv4 en IPv6."

@@ -42,8 +42,9 @@ fetch_scripts_if_needed() {
   local firewall_script_local="${BASE_DIR}/scripts/02_firewall/install_firewall.sh"
   local wg_script_local="${BASE_DIR}/scripts/03_wireguard/install_wireguard.sh"
   local k8s_script_local="${BASE_DIR}/scripts/04_kubernetes/install_kubernetes.sh"
+  local master_script_local="${BASE_DIR}/scripts/05_master/setup_master.sh"
 
-  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" ]]; then
+  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$master_script_local" ]]; then
     echo "$BASE_DIR"
     return 0
   fi
@@ -54,7 +55,7 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/04_kubernetes/install_kubernetes.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/04_kubernetes/install_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/setup_master.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi
@@ -216,13 +217,21 @@ SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_ssh/install_ssh.sh"
 FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/02_firewall/install_firewall.sh"
 WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/03_wireguard/install_wireguard.sh"
 KUBERNETES_SCRIPT="${SCRIPT_ROOT}/scripts/04_kubernetes/install_kubernetes.sh"
+MASTER_SCRIPT="${SCRIPT_ROOT}/scripts/05_master/setup_master.sh"
 
 INTERNAL_IP="$(ask_internal_ip)"
 ROLE="$(ask_role)"
+FIRST_MASTER="nee"
+if [[ "$ROLE" == "master" ]]; then
+  FIRST_MASTER="$(ask_first_master)"
+fi
 HOSTNAME_VALUE="$(ask_hostname)"
 
 echo "Gekozen intern IP: ${INTERNAL_IP}"
 echo "Gekozen role: ${ROLE}"
+if [[ "$ROLE" == "master" ]]; then
+  echo "Eerste master: ${FIRST_MASTER}"
+fi
 echo "Gekozen hostname: ${HOSTNAME_VALUE}"
 
 echo "Hostname instellen..."
@@ -238,5 +247,9 @@ INTERNAL_IP="$INTERNAL_IP" "$WIREGUARD_SCRIPT"
 check_wireguard_ready
 "$KUBERNETES_SCRIPT"
 check_kubelet_healthy
+
+if [[ "$ROLE" == "master" && "$FIRST_MASTER" == "ja" ]]; then
+  "$MASTER_SCRIPT"
+fi
 
 echo "Installatie afgerond."
