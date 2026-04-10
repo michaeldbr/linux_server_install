@@ -43,8 +43,9 @@ fetch_scripts_if_needed() {
   local wg_script_local="${BASE_DIR}/scripts/03_wireguard/install_wireguard.sh"
   local k8s_script_local="${BASE_DIR}/scripts/04_kubernetes/install_kubernetes.sh"
   local master_script_local="${BASE_DIR}/scripts/05_master/setup_master.sh"
+  local haproxy_script_local="${BASE_DIR}/scripts/05_master/install_haproxy.sh"
 
-  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$master_script_local" ]]; then
+  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$master_script_local" && -x "$haproxy_script_local" ]]; then
     echo "$BASE_DIR"
     return 0
   fi
@@ -55,7 +56,7 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/04_kubernetes/install_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/setup_master.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/04_kubernetes/install_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/setup_master.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/install_haproxy.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi

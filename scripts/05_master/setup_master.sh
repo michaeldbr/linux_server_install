@@ -1,62 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-install_haproxy_if_needed() {
-  if command -v haproxy >/dev/null 2>&1; then
-    return 0
-  fi
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HAPROXY_SCRIPT="${BASE_DIR}/install_haproxy.sh"
 
-  if command -v apt-get >/dev/null 2>&1; then
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -y
-    apt-get install -y haproxy
-  elif command -v dnf >/dev/null 2>&1; then
-    dnf install -y haproxy
-  elif command -v yum >/dev/null 2>&1; then
-    yum install -y haproxy
-  else
-    echo "Geen ondersteunde package manager gevonden voor HAProxy." >&2
-    exit 1
-  fi
-}
-
-configure_hosts() {
-  if ! grep -qE '^127\.0\.0\.1[[:space:]]+k8s-api\.internal(\s|$)' /etc/hosts; then
-    echo "127.0.0.1 k8s-api.internal" >> /etc/hosts
-  fi
-}
-
-configure_haproxy() {
-  cat > /etc/haproxy/haproxy.cfg <<'CFG'
-global
-  log /dev/log local0
-  log /dev/log local1 notice
-  daemon
-
-defaults
-  log global
-  mode tcp
-  option dontlognull
-  timeout connect 5s
-  timeout client 50s
-  timeout server 50s
-
-frontend k8s
-  bind 127.0.0.1:6443
-  mode tcp
-  default_backend masters
-
-backend masters
-  mode tcp
-  option tcp-check
-  server master1 10.0.0.1:6443 check
-  server master2 10.0.0.2:6443 check
-  server master3 10.0.0.3:6443 check
-CFG
-
-  systemctl enable --now haproxy
-  systemctl restart haproxy
-}
+if [[ ! -x "$HAPROXY_SCRIPT" ]]; then
+  echo "HAProxy script ontbreekt of is niet uitvoerbaar: $HAPROXY_SCRIPT" >&2
+  exit 1
+fi
 
 run_kubeadm_init_if_first_master() {
   if [[ "${FIRST_MASTER:-nee}" != "ja" ]]; then
@@ -82,7 +33,6 @@ run_kubeadm_init_if_first_master() {
 
   echo "kubeadm init voltooid."
 }
-
 
 check_api_server() {
   if [[ ! -f /etc/kubernetes/admin.conf ]]; then
@@ -116,11 +66,9 @@ post_init_setup() {
   fi
 }
 
-install_haproxy_if_needed
-configure_hosts
-configure_haproxy
+"$HAPROXY_SCRIPT"
 run_kubeadm_init_if_first_master
 post_init_setup
 check_api_server
 
-echo "Master setup voltooid: hosts + HAProxy + (optioneel) kubeadm init + kubeconfig/Flannel + API check."
+echo "Master setup voltooid: HAProxy + (optioneel) kubeadm init + kubeconfig/Flannel + API check."
