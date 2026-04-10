@@ -43,10 +43,10 @@ global
 defaults
   log global
   mode tcp
-  option dontlognull
+  option tcplog
   timeout connect 5s
-  timeout client 50s
-  timeout server 50s
+  timeout client  60s
+  timeout server  60s
 
 frontend k8s
   bind 0.0.0.0:6443
