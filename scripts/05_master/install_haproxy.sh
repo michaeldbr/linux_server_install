@@ -49,7 +49,7 @@ defaults
   timeout server 50s
 
 frontend k8s
-  bind 127.0.0.1:6443
+  bind 0.0.0.0:6443
   mode tcp
   default_backend masters
 
