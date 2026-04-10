@@ -16,6 +16,7 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - `scripts/01_ssh/install_ssh.sh`: SSH installatie en hardening.
 - `scripts/02_firewall/install_firewall.sh`: iptables regels + IPv6 uitschakelen.
 - `scripts/03_wireguard/install_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
+- `scripts/04_kubernetes/install_kubernetes.sh`: containerd + `kubeadm`, `kubelet`, `kubectl` installatie en config.
 
 ## Wat doet het script?
 
@@ -30,3 +31,4 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Schakelt IPv6 uit via sysctl.
 - Installeert WireGuard na de firewall-stap en maakt automatisch een werkende `wg0` configuratie aan.
 - Genereert server keys in `/etc/wireguard` en start `wg-quick@wg0`.
+- Installeert containerd, zet de systemd cgroup driver aan, en installeert `kubeadm`, `kubelet` en `kubectl`.

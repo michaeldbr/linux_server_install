@@ -41,8 +41,9 @@ fetch_scripts_if_needed() {
   local ssh_script_local="${BASE_DIR}/scripts/01_ssh/install_ssh.sh"
   local firewall_script_local="${BASE_DIR}/scripts/02_firewall/install_firewall.sh"
   local wg_script_local="${BASE_DIR}/scripts/03_wireguard/install_wireguard.sh"
+  local k8s_script_local="${BASE_DIR}/scripts/04_kubernetes/install_kubernetes.sh"
 
-  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" ]]; then
+  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" ]]; then
     echo "$BASE_DIR"
     return 0
   fi
@@ -53,7 +54,7 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/04_kubernetes/install_kubernetes.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi
@@ -146,6 +147,7 @@ SCRIPT_ROOT="$(fetch_scripts_if_needed)"
 SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_ssh/install_ssh.sh"
 FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/02_firewall/install_firewall.sh"
 WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/03_wireguard/install_wireguard.sh"
+KUBERNETES_SCRIPT="${SCRIPT_ROOT}/scripts/04_kubernetes/install_kubernetes.sh"
 
 INTERNAL_IP="$(ask_internal_ip)"
 ROLE="$(ask_role)"
@@ -164,5 +166,6 @@ echo "Role opgeslagen in /etc/linux_server_role"
 "$SSH_SCRIPT"
 "$FIREWALL_SCRIPT"
 "$WIREGUARD_SCRIPT"
+"$KUBERNETES_SCRIPT"
 
 echo "Installatie afgerond."
