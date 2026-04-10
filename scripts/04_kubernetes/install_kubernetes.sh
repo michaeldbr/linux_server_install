@@ -145,8 +145,4 @@ install_kubernetes_tools
 echo "Containerd, tijdsync en Kubernetes tools installatie gereed."
 echo "Geïnstalleerd: chrony/systemd-timesyncd, containerd, kubeadm, kubelet, kubectl"
 
-cat > /etc/default/kubelet <<EOF
-KUBELET_EXTRA_ARGS=--cgroup-driver=systemd --node-ip=${INTERNAL_IP}
-EOF
-
 systemctl restart kubelet
