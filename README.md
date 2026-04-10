@@ -13,7 +13,7 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - `install.sh`: hoofdscript met de interactieve vragen (2x controle per invoer).
 - `scripts/01_ssh/install_ssh.sh`: SSH installatie en hardening.
 - `scripts/02_firewall/install_firewall.sh`: iptables regels + IPv6 uitschakelen.
-- `scripts/03_wireguard/install_wireguard.sh`: WireGuard installeren.
+- `scripts/03_wireguard/install_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
 
 ## Wat doet het script?
 
@@ -26,4 +26,5 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Zet root login via SSH uit.
 - Installeert de gevraagde iptables regels.
 - Schakelt IPv6 uit via sysctl.
-- Installeert WireGuard na de firewall-stap.
+- Installeert WireGuard na de firewall-stap en maakt automatisch een werkende `wg0` configuratie aan.
+- Genereert server keys in `/etc/wireguard` en start `wg-quick@wg0`.
