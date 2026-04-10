@@ -6,10 +6,60 @@ if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
   exit 1
 fi
 
+REPO_URL="${REPO_URL:-https://github.com/michaeldbr/linux_server_install.git}"
+BRANCH="${BRANCH:-main}"
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SSH_SCRIPT="${BASE_DIR}/scripts/01_ssh/install_ssh.sh"
-FIREWALL_SCRIPT="${BASE_DIR}/scripts/02_firewall/install_firewall.sh"
-WIREGUARD_SCRIPT="${BASE_DIR}/scripts/03_wireguard/install_wireguard.sh"
+TMP_REPO_DIR=""
+
+install_git_if_needed() {
+  if command -v git >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v apt-get >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -y
+    apt-get install -y git
+  elif command -v dnf >/dev/null 2>&1; then
+    dnf install -y git
+  elif command -v yum >/dev/null 2>&1; then
+    yum install -y git
+  else
+    echo "Git ontbreekt en kon niet automatisch worden geïnstalleerd." >&2
+    exit 1
+  fi
+}
+
+cleanup() {
+  if [[ -n "$TMP_REPO_DIR" && -d "$TMP_REPO_DIR" ]]; then
+    rm -rf "$TMP_REPO_DIR"
+  fi
+}
+trap cleanup EXIT
+
+fetch_scripts_if_needed() {
+  local ssh_script_local="${BASE_DIR}/scripts/01_ssh/install_ssh.sh"
+  local firewall_script_local="${BASE_DIR}/scripts/02_firewall/install_firewall.sh"
+  local wg_script_local="${BASE_DIR}/scripts/03_wireguard/install_wireguard.sh"
+
+  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" ]]; then
+    echo "$BASE_DIR"
+    return 0
+  fi
+
+  echo "Lokale scripts niet gevonden. Repo wordt opgehaald vanuit: ${REPO_URL} (branch: ${BRANCH})"
+  install_git_if_needed
+
+  TMP_REPO_DIR="$(mktemp -d)"
+  git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
+
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" ]]; then
+    echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
+    exit 1
+  fi
+
+  echo "$TMP_REPO_DIR"
+}
 
 ask_twice_match() {
   local prompt="$1"
@@ -92,20 +142,10 @@ ask_hostname() {
   done
 }
 
-if [[ ! -x "$SSH_SCRIPT" ]]; then
-  echo "Kan SSH script niet uitvoeren: $SSH_SCRIPT" >&2
-  exit 1
-fi
-
-if [[ ! -x "$FIREWALL_SCRIPT" ]]; then
-  echo "Kan firewall script niet uitvoeren: $FIREWALL_SCRIPT" >&2
-  exit 1
-fi
-
-if [[ ! -x "$WIREGUARD_SCRIPT" ]]; then
-  echo "Kan WireGuard script niet uitvoeren: $WIREGUARD_SCRIPT" >&2
-  exit 1
-fi
+SCRIPT_ROOT="$(fetch_scripts_if_needed)"
+SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_ssh/install_ssh.sh"
+FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/02_firewall/install_firewall.sh"
+WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/03_wireguard/install_wireguard.sh"
 
 INTERNAL_IP="$(ask_internal_ip)"
 ROLE="$(ask_role)"

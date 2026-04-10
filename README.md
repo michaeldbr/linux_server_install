@@ -8,6 +8,8 @@ curl -fsSL https://raw.githubusercontent.com/michaeldbr/linux_server_install/mai
 
 Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 
+`install.sh` haalt automatisch de overige scripts op vanuit `REPO_URL` en `BRANCH` als ze lokaal nog niet bestaan, zodat dit out-of-the-box werkt met alleen de curl opdracht.
+
 ## Structuur
 
 - `install.sh`: hoofdscript met de interactieve vragen (2x controle per invoer).
