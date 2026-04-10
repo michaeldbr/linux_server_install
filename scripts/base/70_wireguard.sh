@@ -18,7 +18,14 @@ if ! command -v wg >/dev/null 2>&1; then
   exit 1
 fi
 
-readarray -t WG_CONFIG < <(python3 - "${CONFIG_FILE}" <<'PY'
+declare ENABLED INTERFACE LISTEN_PORT PRIVATE_KEY_PATH PUBLIC_KEY_PATH GENERATE_KEYS FORWARDING AUTO_START NETWORK_PREFIX
+while IFS=$'\t' read -r key value; do
+  case "${key}" in
+    ENABLED|INTERFACE|LISTEN_PORT|PRIVATE_KEY_PATH|PUBLIC_KEY_PATH|GENERATE_KEYS|FORWARDING|AUTO_START|NETWORK_PREFIX)
+      printf -v "${key}" '%s' "${value}"
+      ;;
+  esac
+done < <(python3 - "${CONFIG_FILE}" <<'PY'
 import json
 import sys
 
@@ -28,25 +35,28 @@ with open(cfg_path, "r", encoding="utf-8") as f:
 
 wg = cfg.get("wireguard", {})
 if not wg.get("enabled", False):
-    print("ENABLED=false")
-    sys.exit(0)
+    print("ENABLED\tfalse")
+    raise SystemExit(0)
 
-print("ENABLED=true")
-print(f"INTERFACE={wg.get('interface', 'wg0')}")
-print(f"LISTEN_PORT={wg.get('network', {}).get('listen_port', 51820)}")
-print(f"PRIVATE_KEY_PATH={wg.get('keys', {}).get('private_key_path', '/etc/wireguard/private.key')}")
-print(f"PUBLIC_KEY_PATH={wg.get('keys', {}).get('public_key_path', '/etc/wireguard/public.key')}")
-print(f"GENERATE_KEYS={str(wg.get('keys', {}).get('generate', True)).lower()}")
-print(f"FORWARDING={str(wg.get('firewall', {}).get('forwarding', True)).lower()}")
-print(f"AUTO_START={str(wg.get('auto_start', True)).lower()}")
+network_subnet = str(wg.get("network", {}).get("subnet", "10.0.0.0/24"))
+if "/" in network_subnet:
+    network_prefix = network_subnet.split("/", 1)[1]
+else:
+    network_prefix = "24"
+
+print("ENABLED\ttrue")
+print(f"INTERFACE\t{wg.get('interface', 'wg0')}")
+print(f"LISTEN_PORT\t{wg.get('network', {}).get('listen_port', 51820)}")
+print(f"PRIVATE_KEY_PATH\t{wg.get('keys', {}).get('private_key_path', '/etc/wireguard/private.key')}")
+print(f"PUBLIC_KEY_PATH\t{wg.get('keys', {}).get('public_key_path', '/etc/wireguard/public.key')}")
+print(f"GENERATE_KEYS\t{str(wg.get('keys', {}).get('generate', True)).lower()}")
+print(f"FORWARDING\t{str(wg.get('firewall', {}).get('forwarding', True)).lower()}")
+print(f"AUTO_START\t{str(wg.get('auto_start', True)).lower()}")
+print(f"NETWORK_PREFIX\t{network_prefix}")
 PY
 )
 
-for item in "${WG_CONFIG[@]}"; do
-  eval "${item}"
-done
-
-if [[ "${ENABLED}" != "true" ]]; then
+if [[ "${ENABLED:-false}" != "true" ]]; then
   echo "[WG] WireGuard staat disabled in config.json, stap wordt overgeslagen."
   exit 0
 fi
@@ -66,7 +76,7 @@ if (( LAST_OCTET < 1 || LAST_OCTET > 254 )); then
 fi
 
 IPVANSERVER="${SERVER_IP}"
-IPVANSERVER_CIDR="${IPVANSERVER}/24"
+IPVANSERVER_CIDR="${IPVANSERVER}/${NETWORK_PREFIX:-24}"
 echo "[WG] Intern server IP ingesteld op ${IPVANSERVER}"
 
 echo "[WG] WireGuard directory voorbereiden..."
@@ -96,7 +106,7 @@ echo "[WG] ${INTERFACE}.conf opbouwen..."
   echo "[Interface]"
   echo "PrivateKey = $(cat "${PRIVATE_KEY_PATH}")"
   echo "Address = ${IPVANSERVER_CIDR}"
-  echo "ListenPort = 51820"
+  echo "ListenPort = ${LISTEN_PORT}"
 } > "${WG_CONF_PATH}"
 
 chmod 600 "${WG_CONF_PATH}"
@@ -106,9 +116,9 @@ if [[ "${FORWARDING}" == "true" ]]; then
   sysctl -w net.ipv4.ip_forward=1 >/dev/null
 
   mkdir -p /etc/sysctl.d
-  cat > /etc/sysctl.d/99-wireguard-forwarding.conf <<EOF
+  cat > /etc/sysctl.d/99-wireguard-forwarding.conf <<CFG
 net.ipv4.ip_forward=1
-EOF
+CFG
 
   sysctl --system >/dev/null
 fi

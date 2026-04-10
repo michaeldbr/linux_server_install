@@ -7,26 +7,16 @@ source "${SCRIPT_DIR}/common.sh"
 
 echo "[FIREWALL] Firewall configureren..."
 
-# Reset bestaande IPv4 regels
-iptables -F
-iptables -X
-iptables -t nat -F
-iptables -t nat -X
-iptables -t mangle -F
-iptables -t mangle -X
+# Zorg dat eigen chains bestaan en schoon zijn, zonder complete globale flush.
+for chain in INPUT_BASE INPUT_SSH INPUT_WG INPUT_ROLE LOG_ACCEPT LOG_DROP; do
+  iptables -N "${chain}" 2>/dev/null || true
+  iptables -F "${chain}"
+done
 
 # Default policies
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT ACCEPT
-
-# Nieuwe chains
-iptables -N INPUT_BASE
-iptables -N INPUT_SSH
-iptables -N INPUT_WG
-iptables -N INPUT_ROLE
-iptables -N LOG_ACCEPT
-iptables -N LOG_DROP
 
 # Logging chains
 iptables -A LOG_ACCEPT -m limit --limit 10/min --limit-burst 20 -j LOG --log-prefix "IPTABLES ACCEPT: " --log-level 4
@@ -35,7 +25,10 @@ iptables -A LOG_ACCEPT -j ACCEPT
 iptables -A LOG_DROP -m limit --limit 10/min --limit-burst 20 -j LOG --log-prefix "IPTABLES DROP: " --log-level 4
 iptables -A LOG_DROP -j DROP
 
-# INPUT hoofdrouting
+# INPUT hoofdrouting naar INPUT_BASE exact één keer.
+while iptables -C INPUT -j INPUT_BASE >/dev/null 2>&1; do
+  iptables -D INPUT -j INPUT_BASE
+done
 iptables -A INPUT -j INPUT_BASE
 
 # BASE-regels
@@ -55,13 +48,21 @@ iptables -A INPUT_BASE -j INPUT_ROLE
 # Alles wat overblijft loggen en droppen
 iptables -A INPUT_BASE -j LOG_DROP
 
-# SSH whitelist
-iptables -A INPUT_SSH -s "${ALLOWED_IP_1}" -j LOG_ACCEPT
-iptables -A INPUT_SSH -s "${ALLOWED_IP_2}" -j LOG_ACCEPT
+# SSH whitelist via ALLOWED_SSH_IPS CSV.
+declare -a allowed_ssh_ips=()
+parse_csv_to_array "${ALLOWED_SSH_IPS}" allowed_ssh_ips
+
+if (( ${#allowed_ssh_ips[@]} == 0 )); then
+  echo "[FIREWALL] FOUT: ALLOWED_SSH_IPS bevat geen geldige IP-adressen." >&2
+  exit 1
+fi
+
+for ip in "${allowed_ssh_ips[@]}"; do
+  iptables -A INPUT_SSH -s "${ip}" -j LOG_ACCEPT
+done
 iptables -A INPUT_SSH -j LOG_DROP
 
 # WireGuard poort openzetten
-# Let op: hier niet op source-IP filteren, omdat peers/providers kunnen wisselen.
 iptables -A INPUT_WG -j ACCEPT
 
 # INPUT_ROLE is bewust leeg in de base en wordt per rol gevuld.
@@ -70,13 +71,23 @@ iptables -A INPUT_ROLE -j RETURN
 # Persist opslaan
 iptables-save > /etc/iptables/rules.v4
 
-# IPv6 volledig blokkeren
-ip6tables -F
-ip6tables -X
-ip6tables -P INPUT DROP
-ip6tables -P FORWARD DROP
-ip6tables -P OUTPUT DROP
-ip6tables-save > /etc/iptables/rules.v6
+case "${IPV6_POLICY}" in
+  drop)
+    ip6tables -F
+    ip6tables -X
+    ip6tables -P INPUT DROP
+    ip6tables -P FORWARD DROP
+    ip6tables -P OUTPUT DROP
+    ip6tables-save > /etc/iptables/rules.v6
+    ;;
+  keep)
+    echo "[FIREWALL] IPV6_POLICY=keep, bestaande IPv6 policy blijft ongewijzigd."
+    ;;
+  *)
+    echo "[FIREWALL] FOUT: onbekende IPV6_POLICY='${IPV6_POLICY}', gebruik 'drop' of 'keep'." >&2
+    exit 1
+    ;;
+esac
 
 systemctl enable netfilter-persistent
 netfilter-persistent save

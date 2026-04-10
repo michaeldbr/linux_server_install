@@ -18,7 +18,7 @@ fi
 
 case "${ROLE_NAME}" in
   master)
-    DEFAULT_BACKEND_IP="10.0.0.1,10.0.0.2,10.0.0.3"
+    DEFAULT_BACKEND_IP="${MASTER_BACKEND_IPS:-10.0.0.1,10.0.0.2,10.0.0.3}"
     ;;
   *)
     DEFAULT_BACKEND_IP="${WIREGUARD_SERVER_IP:-}"
@@ -26,6 +26,9 @@ case "${ROLE_NAME}" in
 esac
 
 if [[ -z "${CONTROL_PLANE_BACKENDS}" ]]; then
+  if [[ "${ROLE_NAME}" == "master" ]]; then
+    echo "[SERVICES:${ROLE_NAME}] WAARSCHUWING: CONTROL_PLANE_BACKENDS niet gezet, fallback naar '${DEFAULT_BACKEND_IP}'."
+  fi
   CONTROL_PLANE_BACKENDS="${DEFAULT_BACKEND_IP}"
 fi
 
@@ -45,6 +48,10 @@ for i in "${!backend_ips[@]}"; do
   backend_ip="$(echo "${backend_ips[$i]}" | xargs)"
   if [[ -z "${backend_ip}" ]]; then
     continue
+  fi
+  if [[ ! "${backend_ip}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "[SERVICES:${ROLE_NAME}] FOUT: ongeldige backend IP '${backend_ip}'." >&2
+    exit 1
   fi
   backend_lines+=("    server master$((i + 1)) ${backend_ip}:6443 check")
 done

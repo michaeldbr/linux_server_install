@@ -149,5 +149,9 @@ echo "[CLEANUP] Opschonen van ongebruikte pakketten..."
 run_script "scripts/base/99_cleanup.sh"
 
 echo "Klaar. SSH draait op poort ${SSH_PORT}. Tijdzone staat op Europe/Amsterdam."
-echo "Installatie succesvol afgerond. Systeem wordt nu automatisch herstart..."
-reboot
+if [[ "${AUTO_REBOOT}" == "true" ]]; then
+  echo "Installatie succesvol afgerond. Systeem wordt nu automatisch herstart..."
+  reboot
+else
+  echo "Installatie succesvol afgerond. AUTO_REBOOT=false, reboot handmatig wanneer gewenst."
+fi

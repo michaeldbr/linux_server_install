@@ -93,13 +93,14 @@ if ! iptables -C INPUT_BASE -p udp --dport "${WIREGUARD_PORT}" -j INPUT_WG >/dev
   retry_script "scripts/base/80_firewall_rules.sh"
 fi
 
-if ! iptables -C INPUT_SSH -s "${ALLOWED_IP_1}" -j LOG_ACCEPT >/dev/null 2>&1; then
-  retry_script "scripts/base/80_firewall_rules.sh"
-fi
-
-if ! iptables -C INPUT_SSH -s "${ALLOWED_IP_2}" -j LOG_ACCEPT >/dev/null 2>&1; then
-  retry_script "scripts/base/80_firewall_rules.sh"
-fi
+declare -a allowed_ssh_ips=()
+parse_csv_to_array "${ALLOWED_SSH_IPS}" allowed_ssh_ips
+for allow_ip in "${allowed_ssh_ips[@]}"; do
+  if ! iptables -C INPUT_SSH -s "${allow_ip}" -j LOG_ACCEPT >/dev/null 2>&1; then
+    retry_script "scripts/base/80_firewall_rules.sh"
+    break
+  fi
+done
 
 if ! iptables -C INPUT_WG -j ACCEPT >/dev/null 2>&1; then
   retry_script "scripts/base/80_firewall_rules.sh"
