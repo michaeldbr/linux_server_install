@@ -18,7 +18,7 @@ write_kubeadm_config() {
   cat > "$KUBEADM_CONFIG_FILE" <<'YAML'
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
-controlPlaneEndpoint: "k8s-api.internal:6443"
+controlPlaneEndpoint: "k8s-api.internal:7443"
 networking:
   podSubnet: "10.244.0.0/16"
 YAML
@@ -53,7 +53,7 @@ run_kubeadm_init_if_first_master() {
 
   write_kubeadm_config
 
-  echo "Start kubeadm init met control-plane endpoint 10.0.0.1:6443..."
+  echo "Start kubeadm init met control-plane endpoint k8s-api.internal:7443..."
   kubeadm init --config "$KUBEADM_CONFIG_FILE" --upload-certs
 
   create_join_script

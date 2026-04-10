@@ -82,6 +82,7 @@ iptables -A FORWARD -s 10.0.0.0/24 -j ACCEPT
 iptables -A FORWARD -d 10.0.0.0/24 -j ACCEPT
 
 # Kubernetes control-plane en node poorten (intern)
+iptables -A INPUT -s 10.0.0.0/24 -p tcp --dport 7443 -j ACCEPT
 iptables -A INPUT -s 10.0.0.0/24 -p tcp --dport 6443 -j ACCEPT
 iptables -A INPUT -s 10.0.0.0/24 -p tcp --dport 2379:2380 -j ACCEPT
 iptables -A INPUT -s 10.0.0.0/24 -p tcp --dport 10250:10259 -j ACCEPT
