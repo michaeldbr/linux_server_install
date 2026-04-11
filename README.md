@@ -13,37 +13,41 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 ## Structuur
 
 - `install.sh`: hoofdscript met de interactieve vragen (2x controle per invoer).
-- `scripts/01_ssh/install_ssh.sh`: SSH installatie en hardening.
-- `scripts/02_firewall/install_firewall.sh`: iptables regels + IPv6 firewall toepassen.
-- `scripts/03_wireguard/install_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
-- `scripts/04_kubernetes/install_kubernetes.sh`: containerd + `kubeadm`, `kubelet`, `kubectl` installatie en config.
-- `scripts/05_master/install_haproxy.sh`: configureert bestaande HAProxy voor masters (`k8s-api.internal:7443`) zonder automatische installatie.
-- `scripts/05_master/setup_master.sh`: role-specifieke master setup met `kubeadm init` en cluster post-init.
-- `scripts/06_checks/check_etcd.sh`: basiscontrole voor control-plane endpoints en componentstatus.
-- `scripts/07_logging/install_fluentbit.sh`: installeert Fluent Bit en forward logs naar centrale endpoint.
+- `scripts/`: alle scripts staan direct in deze map (geen submappen).
+- Fase 1 (server voorbereiden): `01_<volgorde>_<applicatie>.sh`
+  - `scripts/01_01_ssh.sh`: SSH installatie en hardening.
+  - `scripts/01_02_cronjob.sh`: cron(crond) installeren en service activeren.
+  - `scripts/01_03_webmin.sh`: Webmin installeren en toegang op poort `40112` zetten.
+  - `scripts/01_04_firewall.sh`: iptables regels + IPv6 firewall toepassen.
+  - `scripts/01_05_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
+  - `scripts/01_99_phase_check.sh`: eindcontrole fase 1.
+- Fase 2 (rollen): `02_<role>_<volgorde>_<check>.sh`
+  - `scripts/02_frontend_01_apache.sh`: Apache installeren en vereiste modules activeren.
+  - `scripts/02_frontend_02_firewall.sh`: poorten 80/443 openzetten voor frontend role.
+  - `scripts/02_frontend_03_letsencrypt.sh`: Let's Encrypt installeren, certificaat aanvragen/installeren en auto-renew instellen.
+  - `scripts/02_frontend_99_phase_check.sh`: eindcontrole fase 2 voor role frontend.
+  - `scripts/02_backend_99_phase_check.sh`: eindcontrole fase 2 voor role backend.
 
 ## Wat doet het script?
 
 - Vraagt 2x om het interne IP-adres en vergelijkt de antwoorden.
-- Vraagt 2x om de role (`1` = master, `2` = worker) en vergelijkt de antwoorden.
-- Bij role `master`: vraagt 2x of dit de eerste master is (`ja/nee`).
+- Vraagt 2x om de role (`1` = frontend, `2` = backend) en vergelijkt de antwoorden.
 - Vraagt 2x om de hostname en vergelijkt de antwoorden.
 - Maakt user `michael` aan (indien nog niet aanwezig).
 - Configureert SSH key login voor `michael` met de opgegeven publieke sleutel.
 - Zet SSH op poort `40111`.
 - Zet root login via SSH uit.
+- Installeert en activeert cron/crond in fase 1.
+- Installeert Webmin in fase 1 en zet Webmin toegang op poort `40112`.
 - Installeert de gevraagde iptables regels.
-- Staat FORWARD verkeer voor Kubernetes intern subnet `10.0.0.0/24` en pod CIDR `10.244.0.0/16` expliciet toe, inclusief Kubernetes poorten `7443`, `6443`, `2379-2380`, `10250-10259` intern.
+- Voert firewall pas laat in fase 1 uit (na netwerk-check en vlak voor WireGuard) om blokkades tijdens setup te voorkomen.
+- Staat FORWARD verkeer voor het WireGuard subnet `10.0.0.0/24` toe (huidige setup zonder Kubernetes/HAProxy).
 - Past ook IPv6 firewall regels toe (established eerst accept, daarna drop).
 - Installeert WireGuard na de firewall-stap en maakt automatisch een werkende `wg0` configuratie aan (met `WG_ADDRESS=${INTERNAL_IP}/24`) met NAT die pod CIDR 10.244.0.0/16 uitsluit.
 - Genereert server keys in `/etc/wireguard` en start `wg-quick@wg0`.
-- Installeert/activeert tijdsync (`chrony` of `systemd-timesyncd`), zet timezone op `Europe/Amsterdam`, installeert containerd, zet de systemd cgroup driver aan, en installeert `kubeadm`, `kubelet` en `kubectl`.
-- Controleert na firewall of netwerk/DNS klaar is voordat WireGuard/Kubernetes doorgaat.
+- Controleert na firewall of netwerk/DNS klaar is voordat WireGuard doorgaat.
 - Controleert of WireGuard (`wg-quick@wg0` + interface `wg0`) echt actief is.
-- Controleert na Kubernetes installatie of `kubelet` actief en healthy is.
-- Controleert na master setup de API (`kubectl get nodes`) en voert etcd/control-plane basischeck uit.
-- Installeert Fluent Bit voor log forwarding (incl. journald/iptables logs).
 - Voert preflight resource-check uit (minimaal 2 CPU cores en 2GB RAM).
 - Logt na elke installatiestap expliciet `Stap ... afgerond ✔️` voor debugging.
-- Voert op de eerste master `kubeadm init` uit met `controlPlaneEndpoint: "k8s-api.internal:7443"`, zet `/home/michael/.kube/config`, en applyt Flannel CNI.
-- Genereert op eerste master `/root/join.sh`; op extra masters (`FIRST_MASTER=nee`) wordt dit join script uitgevoerd voor control-plane join.
+- Voert per script en per fase een controle uit. Bij failure wordt maximaal 3 keer geprobeerd om de stap te herstellen door het script opnieuw uit te voeren; daarna stopt de installatie.
+- Bij role `frontend` installeert fase 2 Apache, activeert modules `access_compat alias dir mime setenvif deflate filter headers ssl http2 rewrite`, opent daarna poorten 80/443, en installeert/activeert Let's Encrypt met certificaataanvraag + auto-renew.
