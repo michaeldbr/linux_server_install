@@ -5,7 +5,7 @@ echo "127.0.0.1 k8s-api.internal" >> /etc/hosts
 set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HAPROXY_SCRIPT="${BASE_DIR}/02_master_haproxy.sh"
+HAPROXY_SCRIPT="${BASE_DIR}/02_backend_haproxy.sh"
 KUBEADM_CONFIG_FILE="/etc/kubernetes/kubeadm-config.yaml"
 
 if [[ ! -x "$HAPROXY_SCRIPT" ]]; then
@@ -40,14 +40,14 @@ JOIN
   echo "Join script aangemaakt: /root/join.sh"
 }
 
-run_kubeadm_init_if_first_master() {
-  if [[ "${FIRST_MASTER:-nee}" != "ja" ]]; then
-    echo "Dit is geen eerste master; kubeadm init wordt overgeslagen."
+run_kubeadm_init_if_first_backend() {
+  if [[ "${FIRST_BACKEND:-nee}" != "ja" ]]; then
+    echo "Dit is geen eerste backend; kubeadm init wordt overgeslagen."
     return 0
   fi
 
   if [[ -f /etc/kubernetes/admin.conf ]]; then
-    echo "Kubernetes master lijkt al geinitialiseerd (/etc/kubernetes/admin.conf bestaat al)."
+    echo "Kubernetes backend node lijkt al geinitialiseerd (/etc/kubernetes/admin.conf bestaat al)."
     return 0
   fi
 
@@ -84,7 +84,7 @@ post_init_setup() {
   cp /etc/kubernetes/admin.conf /home/michael/.kube/config
   chown -R michael:michael /home/michael/.kube
 
-  if [[ "${FIRST_MASTER:-nee}" == "ja" ]]; then
+  if [[ "${FIRST_BACKEND:-nee}" == "ja" ]]; then
     echo "CNI (Flannel) installeren..."
     su - michael -c "kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml"
 
@@ -94,8 +94,8 @@ post_init_setup() {
 }
 
 "$HAPROXY_SCRIPT"
-run_kubeadm_init_if_first_master
+run_kubeadm_init_if_first_backend
 post_init_setup
 check_api_server
 
-echo "Master setup voltooid: HAProxy + (optioneel) kubeadm init + kubeconfig/Flannel + API check."
+echo "Backend setup voltooid: HAProxy + (optioneel) kubeadm init + kubeconfig/Flannel + API check."

@@ -21,15 +21,16 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
   - `scripts/01_kubernetes.sh`: containerd + `kubeadm`, `kubelet`, `kubectl` installatie en config.
   - `scripts/01_fluentbit.sh`: installeert Fluent Bit en forward logs naar centrale endpoint.
 - Fase 2 (rollen): `02_<role>_<applicatie>.sh`
-  - `scripts/02_master_haproxy.sh`: configureert bestaande HAProxy voor masters (`k8s-api.internal:7443`) zonder automatische installatie.
-  - `scripts/02_master_setup.sh`: role-specifieke master setup met `kubeadm init` en cluster post-init.
-  - `scripts/02_master_etcd_check.sh`: basiscontrole voor control-plane endpoints en componentstatus.
+  - `scripts/02_backend_haproxy.sh`: configureert bestaande HAProxy voor backend nodes (`k8s-api.internal:7443`) zonder automatische installatie.
+  - `scripts/02_backend_setup.sh`: role-specifieke backend setup met `kubeadm init` en cluster post-init.
+  - `scripts/02_backend_etcd_check.sh`: basiscontrole voor control-plane endpoints en componentstatus.
+  - `scripts/02_frontend_setup.sh`: role-specifieke frontend setup (momenteel no-op placeholder).
 
 ## Wat doet het script?
 
 - Vraagt 2x om het interne IP-adres en vergelijkt de antwoorden.
-- Vraagt 2x om de role (`1` = master, `2` = worker) en vergelijkt de antwoorden.
-- Bij role `master`: vraagt 2x of dit de eerste master is (`ja/nee`).
+- Vraagt 2x om de role (`1` = frontend, `2` = backend) en vergelijkt de antwoorden.
+- Bij role `backend`: vraagt 2x of dit de eerste backend is (`ja/nee`).
 - Vraagt 2x om de hostname en vergelijkt de antwoorden.
 - Maakt user `michael` aan (indien nog niet aanwezig).
 - Configureert SSH key login voor `michael` met de opgegeven publieke sleutel.
@@ -44,9 +45,9 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Controleert na firewall of netwerk/DNS klaar is voordat WireGuard/Kubernetes doorgaat.
 - Controleert of WireGuard (`wg-quick@wg0` + interface `wg0`) echt actief is.
 - Controleert na Kubernetes installatie of `kubelet` actief en healthy is.
-- Controleert na master setup de API (`kubectl get nodes`) en voert etcd/control-plane basischeck uit.
+- Controleert na backend setup de API (`kubectl get nodes`) en voert etcd/control-plane basischeck uit.
 - Installeert Fluent Bit voor log forwarding (incl. journald/iptables logs).
 - Voert preflight resource-check uit (minimaal 2 CPU cores en 2GB RAM).
 - Logt na elke installatiestap expliciet `Stap ... afgerond ✔️` voor debugging.
-- Voert op de eerste master `kubeadm init` uit met `controlPlaneEndpoint: "k8s-api.internal:7443"`, zet `/home/michael/.kube/config`, en applyt Flannel CNI.
-- Genereert op eerste master `/root/join.sh`; op extra masters (`FIRST_MASTER=nee`) wordt dit join script uitgevoerd voor control-plane join.
+- Voert op de eerste backend `kubeadm init` uit met `controlPlaneEndpoint: "k8s-api.internal:7443"`, zet `/home/michael/.kube/config`, en applyt Flannel CNI.
+- Genereert op eerste backend `/root/join.sh`; op extra backends (`FIRST_BACKEND=nee`) wordt dit join script uitgevoerd voor control-plane join.

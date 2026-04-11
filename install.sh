@@ -47,12 +47,13 @@ fetch_scripts_if_needed() {
   local firewall_script_local="${BASE_DIR}/scripts/01_firewall.sh"
   local wg_script_local="${BASE_DIR}/scripts/01_wireguard.sh"
   local k8s_script_local="${BASE_DIR}/scripts/01_kubernetes.sh"
-  local master_script_local="${BASE_DIR}/scripts/02_master_setup.sh"
-  local haproxy_script_local="${BASE_DIR}/scripts/02_master_haproxy.sh"
-  local etcd_check_script_local="${BASE_DIR}/scripts/02_master_etcd_check.sh"
+  local backend_script_local="${BASE_DIR}/scripts/02_backend_setup.sh"
+  local frontend_script_local="${BASE_DIR}/scripts/02_frontend_setup.sh"
+  local haproxy_script_local="${BASE_DIR}/scripts/02_backend_haproxy.sh"
+  local etcd_check_script_local="${BASE_DIR}/scripts/02_backend_etcd_check.sh"
   local logging_script_local="${BASE_DIR}/scripts/01_fluentbit.sh"
 
-  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$master_script_local" && -x "$haproxy_script_local" && -x "$etcd_check_script_local" && -x "$logging_script_local" ]]; then
+  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$backend_script_local" && -x "$frontend_script_local" && -x "$haproxy_script_local" && -x "$etcd_check_script_local" && -x "$logging_script_local" ]]; then
     echo "$BASE_DIR"
     return 0
   fi
@@ -63,7 +64,7 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/01_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/02_master_setup.sh" || ! -x "$TMP_REPO_DIR/scripts/02_master_haproxy.sh" || ! -x "$TMP_REPO_DIR/scripts/02_master_etcd_check.sh" || ! -x "$TMP_REPO_DIR/scripts/01_fluentbit.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/01_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_setup.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_setup.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_haproxy.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_etcd_check.sh" || ! -x "$TMP_REPO_DIR/scripts/01_fluentbit.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi
@@ -219,17 +220,17 @@ ask_role() {
   local role_choice
   while true; do
     echo "Kies de role:" >&2
-    echo "1) master" >&2
-    echo "2) worker" >&2
+    echo "1) frontend" >&2
+    echo "2) backend" >&2
     role_choice="$(ask_twice_match 'Voer 1 of 2 in: ')"
 
     case "$role_choice" in
       1)
-        printf 'master'
+        printf 'frontend'
         return 0
         ;;
       2)
-        printf 'worker'
+        printf 'backend'
         return 0
         ;;
       *)
@@ -240,10 +241,10 @@ ask_role() {
 }
 
 
-ask_first_master() {
+ask_first_backend() {
   local answer
   while true; do
-    answer="$(ask_twice_match "Is dit de eerste master? (ja/nee) ")"
+    answer="$(ask_twice_match "Is dit de eerste backend? (ja/nee) ")"
     case "${answer,,}" in
       ja)
         printf "ja"
@@ -277,8 +278,9 @@ SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_ssh.sh"
 FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/01_firewall.sh"
 WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/01_wireguard.sh"
 KUBERNETES_SCRIPT="${SCRIPT_ROOT}/scripts/01_kubernetes.sh"
-MASTER_SCRIPT="${SCRIPT_ROOT}/scripts/02_master_setup.sh"
-ETCD_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/02_master_etcd_check.sh"
+BACKEND_SCRIPT="${SCRIPT_ROOT}/scripts/02_backend_setup.sh"
+FRONTEND_SCRIPT="${SCRIPT_ROOT}/scripts/02_frontend_setup.sh"
+ETCD_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/02_backend_etcd_check.sh"
 LOGGING_SCRIPT="${SCRIPT_ROOT}/scripts/01_fluentbit.sh"
 
 check_minimum_resources
@@ -286,16 +288,16 @@ echo "Stap resource-check afgerond ✔️"
 
 INTERNAL_IP="$(ask_internal_ip)"
 ROLE="$(ask_role)"
-FIRST_MASTER="nee"
-if [[ "$ROLE" == "master" ]]; then
-  FIRST_MASTER="$(ask_first_master)"
+FIRST_BACKEND="nee"
+if [[ "$ROLE" == "backend" ]]; then
+  FIRST_BACKEND="$(ask_first_backend)"
 fi
 HOSTNAME_VALUE="$(ask_hostname)"
 
 echo "Gekozen intern IP: ${INTERNAL_IP}"
 echo "Gekozen role: ${ROLE}"
-if [[ "$ROLE" == "master" ]]; then
-  echo "Eerste master: ${FIRST_MASTER}"
+if [[ "$ROLE" == "backend" ]]; then
+  echo "Eerste backend: ${FIRST_BACKEND}"
 fi
 echo "Gekozen hostname: ${HOSTNAME_VALUE}"
 
@@ -332,11 +334,11 @@ echo "Stap Kubernetes tools afgerond ✔️"
 check_kubelet_healthy
 echo "Stap kubelet-check afgerond ✔️"
 
-if [[ "$ROLE" == "master" ]]; then
-  INTERNAL_IP="$INTERNAL_IP" FIRST_MASTER="$FIRST_MASTER" "$MASTER_SCRIPT"
-  echo "Stap master-setup afgerond ✔️"
+if [[ "$ROLE" == "backend" ]]; then
+  INTERNAL_IP="$INTERNAL_IP" FIRST_BACKEND="$FIRST_BACKEND" "$BACKEND_SCRIPT"
+  echo "Stap backend-setup afgerond ✔️"
 
-  if [[ "$FIRST_MASTER" == "nee" ]]; then
+  if [[ "$FIRST_BACKEND" == "nee" ]]; then
     if [[ ! -x /root/join.sh ]]; then
       echo "Join script ontbreekt: /root/join.sh" >&2
       exit 1
@@ -350,6 +352,10 @@ if [[ "$ROLE" == "master" ]]; then
 
   "$ETCD_CHECK_SCRIPT"
   echo "Stap etcd/control-plane check afgerond ✔️"
+elif [[ "$ROLE" == "frontend" ]]; then
+  "$FRONTEND_SCRIPT"
+  echo "Stap frontend-setup afgerond ✔️"
+
 fi
 
 echo "Installatie afgerond."
