@@ -50,10 +50,11 @@ fetch_scripts_if_needed() {
   local phase1_check_script_local="${BASE_DIR}/scripts/01_99_phase_check.sh"
   local phase2_frontend_apache_script_local="${BASE_DIR}/scripts/02_frontend_01_apache.sh"
   local phase2_frontend_firewall_script_local="${BASE_DIR}/scripts/02_frontend_02_firewall.sh"
+  local phase2_frontend_letsencrypt_script_local="${BASE_DIR}/scripts/02_frontend_03_letsencrypt.sh"
   local phase2_frontend_check_script_local="${BASE_DIR}/scripts/02_frontend_99_phase_check.sh"
   local phase2_backend_check_script_local="${BASE_DIR}/scripts/02_backend_99_phase_check.sh"
 
-  if [[ -x "$ssh_script_local" && -x "$cronjob_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$phase1_check_script_local" && -x "$phase2_frontend_apache_script_local" && -x "$phase2_frontend_firewall_script_local" && -x "$phase2_frontend_check_script_local" && -x "$phase2_backend_check_script_local" ]]; then
+  if [[ -x "$ssh_script_local" && -x "$cronjob_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$phase1_check_script_local" && -x "$phase2_frontend_apache_script_local" && -x "$phase2_frontend_firewall_script_local" && -x "$phase2_frontend_letsencrypt_script_local" && -x "$phase2_frontend_check_script_local" && -x "$phase2_backend_check_script_local" ]]; then
     echo "$BASE_DIR"
     return 0
   fi
@@ -64,7 +65,7 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_02_cronjob.sh" || ! -x "$TMP_REPO_DIR/scripts/01_03_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_04_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/01_99_phase_check.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_01_apache.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_02_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_99_phase_check.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_99_phase_check.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_02_cronjob.sh" || ! -x "$TMP_REPO_DIR/scripts/01_03_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_04_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/01_99_phase_check.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_01_apache.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_02_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_03_letsencrypt.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_99_phase_check.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_99_phase_check.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi
@@ -194,6 +195,35 @@ check_frontend_firewall_ready() {
     echo "Firewall regel voor poort 443 ontbreekt." >&2
     return 1
   fi
+}
+
+check_letsencrypt_ready() {
+  local domain="${1:-}"
+  if [[ -z "$domain" ]]; then
+    echo "LETSENCRYPT_DOMAIN ontbreekt voor controle." >&2
+    return 1
+  fi
+
+  if ! command -v certbot >/dev/null 2>&1; then
+    echo "certbot is niet geïnstalleerd." >&2
+    return 1
+  fi
+
+  if ! certbot certificates 2>/dev/null | grep -q "Domains: .*${domain}"; then
+    echo "Geen Let's Encrypt certificaat gevonden voor domein ${domain}." >&2
+    return 1
+  fi
+
+  if systemctl list-unit-files | grep -q '^certbot\\.timer'; then
+    if ! systemctl is-enabled certbot.timer >/dev/null 2>&1; then
+      echo "certbot.timer is niet enabled." >&2
+      return 1
+    fi
+  fi
+}
+
+check_frontend_letsencrypt_ready() {
+  check_letsencrypt_ready "${LETSENCRYPT_DOMAIN:-}"
 }
 
 run_script_with_retries() {
@@ -328,6 +358,30 @@ ask_hostname() {
   done
 }
 
+ask_domain() {
+  local domain
+  while true; do
+    domain="$(ask_twice_match \"Wat is de publieke domeinnaam voor Let's Encrypt (bijv. app.example.com)? \")"
+    if [[ "$domain" =~ ^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$ ]]; then
+      printf '%s' "$domain"
+      return 0
+    fi
+    echo "Ongeldige domeinnaam. Probeer opnieuw."
+  done
+}
+
+ask_email() {
+  local email
+  while true; do
+    email="$(ask_twice_match \"Wat is het e-mailadres voor Let's Encrypt meldingen? \")"
+    if [[ "$email" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+      printf '%s' "$email"
+      return 0
+    fi
+    echo "Ongeldig e-mailadres. Probeer opnieuw."
+  done
+}
+
 SCRIPT_ROOT="$(fetch_scripts_if_needed)"
 SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_01_ssh.sh"
 CRONJOB_SCRIPT="${SCRIPT_ROOT}/scripts/01_02_cronjob.sh"
@@ -336,6 +390,7 @@ WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/01_04_wireguard.sh"
 PHASE1_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/01_99_phase_check.sh"
 PHASE2_FRONTEND_APACHE_SCRIPT="${SCRIPT_ROOT}/scripts/02_frontend_01_apache.sh"
 PHASE2_FRONTEND_FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/02_frontend_02_firewall.sh"
+PHASE2_FRONTEND_LETSENCRYPT_SCRIPT="${SCRIPT_ROOT}/scripts/02_frontend_03_letsencrypt.sh"
 PHASE2_FRONTEND_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/02_frontend_99_phase_check.sh"
 PHASE2_BACKEND_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/02_backend_99_phase_check.sh"
 
@@ -345,6 +400,13 @@ echo "Stap resource-check afgerond ✔️"
 INTERNAL_IP="$(ask_internal_ip)"
 ROLE="$(ask_role)"
 HOSTNAME_VALUE="$(ask_hostname)"
+LETSENCRYPT_DOMAIN=""
+LETSENCRYPT_EMAIL=""
+if [[ "$ROLE" == "frontend" ]]; then
+  LETSENCRYPT_DOMAIN="$(ask_domain)"
+  LETSENCRYPT_EMAIL="$(ask_email)"
+  export LETSENCRYPT_DOMAIN LETSENCRYPT_EMAIL
+fi
 
 echo "Gekozen intern IP: ${INTERNAL_IP}"
 echo "Gekozen role: ${ROLE}"
@@ -352,6 +414,10 @@ if [[ "$ROLE" == "backend" ]]; then
   echo "Backend role geselecteerd."
 fi
 echo "Gekozen hostname: ${HOSTNAME_VALUE}"
+if [[ "$ROLE" == "frontend" ]]; then
+  echo "Let's Encrypt domein: ${LETSENCRYPT_DOMAIN}"
+  echo "Let's Encrypt e-mail: ${LETSENCRYPT_EMAIL}"
+fi
 
 echo "Hostname instellen..."
 hostnamectl set-hostname "$HOSTNAME_VALUE"
@@ -377,6 +443,7 @@ run_phase_check_with_retries "$PHASE1_CHECK_SCRIPT" "Fase 1"
 if [[ "$ROLE" == "frontend" ]]; then
   run_script_with_retries check_apache_ready "Stap fase 2.frontend.01 Apache" "$PHASE2_FRONTEND_APACHE_SCRIPT"
   run_script_with_retries check_frontend_firewall_ready "Stap fase 2.frontend.02 firewall" "$PHASE2_FRONTEND_FIREWALL_SCRIPT"
+  run_script_with_retries check_frontend_letsencrypt_ready "Stap fase 2.frontend.03 Let's Encrypt" env "LETSENCRYPT_DOMAIN=${LETSENCRYPT_DOMAIN}" "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}" "$PHASE2_FRONTEND_LETSENCRYPT_SCRIPT"
   run_phase_check_with_retries "$PHASE2_FRONTEND_CHECK_SCRIPT" "Fase 2 frontend" "frontend"
 elif [[ "$ROLE" == "backend" ]]; then
   run_phase_check_with_retries "$PHASE2_BACKEND_CHECK_SCRIPT" "Fase 2 backend" "backend"

@@ -23,6 +23,7 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Fase 2 (rollen): `02_<role>_<volgorde>_<check>.sh`
   - `scripts/02_frontend_01_apache.sh`: Apache installeren en vereiste modules activeren.
   - `scripts/02_frontend_02_firewall.sh`: poorten 80/443 openzetten voor frontend role.
+  - `scripts/02_frontend_03_letsencrypt.sh`: Let's Encrypt installeren, certificaat aanvragen/installeren en auto-renew instellen.
   - `scripts/02_frontend_99_phase_check.sh`: eindcontrole fase 2 voor role frontend.
   - `scripts/02_backend_99_phase_check.sh`: eindcontrole fase 2 voor role backend.
 
@@ -47,4 +48,4 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Voert preflight resource-check uit (minimaal 2 CPU cores en 2GB RAM).
 - Logt na elke installatiestap expliciet `Stap ... afgerond ✔️` voor debugging.
 - Voert per script en per fase een controle uit. Bij failure wordt maximaal 3 keer geprobeerd om de stap te herstellen door het script opnieuw uit te voeren; daarna stopt de installatie.
-- Bij role `frontend` installeert fase 2 Apache, activeert modules `access_compat alias dir mime setenvif deflate filter headers ssl http2 rewrite`, en opent daarna poorten 80/443 via een apart frontend-firewall script.
+- Bij role `frontend` installeert fase 2 Apache, activeert modules `access_compat alias dir mime setenvif deflate filter headers ssl http2 rewrite`, opent daarna poorten 80/443, en installeert/activeert Let's Encrypt met certificaataanvraag + auto-renew.

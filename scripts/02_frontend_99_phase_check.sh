@@ -35,4 +35,16 @@ if command -v a2query >/dev/null 2>&1; then
   done
 fi
 
+if [[ -n "${LETSENCRYPT_DOMAIN:-}" ]]; then
+  if ! command -v certbot >/dev/null 2>&1; then
+    echo "certbot ontbreekt." >&2
+    exit 1
+  fi
+
+  if ! certbot certificates 2>/dev/null | grep -q "Domains: .*${LETSENCRYPT_DOMAIN}"; then
+    echo "Let's Encrypt certificaat ontbreekt voor ${LETSENCRYPT_DOMAIN}." >&2
+    exit 1
+  fi
+fi
+
 echo "Fase 2 frontend controle succesvol."
