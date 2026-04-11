@@ -30,7 +30,8 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Zet SSH op poort `40111`.
 - Zet root login via SSH uit.
 - Installeert de gevraagde iptables regels.
-- Staat FORWARD verkeer voor Kubernetes intern subnet `10.0.0.0/24` en pod CIDR `10.244.0.0/16` expliciet toe, inclusief Kubernetes poorten `7443`, `6443`, `2379-2380`, `10250-10259` intern.
+- Voert firewall pas laat in fase 1 uit (na netwerk-check en vlak voor WireGuard) om blokkades tijdens setup te voorkomen.
+- Staat FORWARD verkeer voor het WireGuard subnet `10.0.0.0/24` toe (huidige setup zonder Kubernetes/HAProxy).
 - Past ook IPv6 firewall regels toe (established eerst accept, daarna drop).
 - Installeert WireGuard na de firewall-stap en maakt automatisch een werkende `wg0` configuratie aan (met `WG_ADDRESS=${INTERNAL_IP}/24`) met NAT die pod CIDR 10.244.0.0/16 uitsluit.
 - Genereert server keys in `/etc/wireguard` en start `wg-quick@wg0`.

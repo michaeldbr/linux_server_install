@@ -23,81 +23,32 @@ fi
 
 # Reset bestaande regels voor idempotent gedrag
 iptables -F
-iptables -X LOG_ACCEPT 2>/dev/null || true
 iptables -X LOG_DROP 2>/dev/null || true
 
-# ========================
-# DEFAULT POLICIES
-# ========================
+# Default policies
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT ACCEPT
 
-# ========================
-# CUSTOM LOG CHAINS
-# ========================
-iptables -N LOG_ACCEPT
+# Drop-chain met logging
 iptables -N LOG_DROP
-
-# ========================
-# LOG ACCEPT (per type)
-# ========================
-
-# SSH logging
-iptables -A LOG_ACCEPT -p tcp --dport 40111 -m limit --limit 10/min --limit-burst 20 -j LOG --log-prefix "ACCEPT_SSH: " --log-level 4
-iptables -A LOG_ACCEPT -p tcp --dport 40111 -j ACCEPT
-
-# WireGuard logging
-iptables -A LOG_ACCEPT -p udp --dport 51820 -m limit --limit 10/min --limit-burst 20 -j LOG --log-prefix "ACCEPT_WG: " --log-level 4
-iptables -A LOG_ACCEPT -p udp --dport 51820 -j ACCEPT
-
-# Internal WG subnet logging
-iptables -A LOG_ACCEPT -s 10.0.0.0/24 -m limit --limit 20/min --limit-burst 50 -j LOG --log-prefix "ACCEPT_INTERNAL: " --log-level 4
-iptables -A LOG_ACCEPT -s 10.0.0.0/24 -j ACCEPT
-
-# Established verkeer (belangrijk, maar minder spam)
-iptables -A LOG_ACCEPT -m conntrack --ctstate RELATED,ESTABLISHED -m limit --limit 30/min --limit-burst 50 -j LOG --log-prefix "ACCEPT_ESTABLISHED: " --log-level 4
-iptables -A LOG_ACCEPT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-
-# Loopback (bijna nooit loggen nodig, maar voor compleetheid)
-iptables -A LOG_ACCEPT -i lo -m limit --limit 5/min --limit-burst 10 -j LOG --log-prefix "ACCEPT_LOOPBACK: " --log-level 4
-iptables -A LOG_ACCEPT -i lo -j ACCEPT
-
-# ========================
-# LOG DROP
-# ========================
 iptables -A LOG_DROP -m limit --limit 20/min --limit-burst 50 -j LOG --log-prefix "DROP_INPUT: " --log-level 4
 iptables -A LOG_DROP -j DROP
 
-# ========================
-# INPUT RULES
-# ========================
-iptables -A INPUT -i lo -j LOG_ACCEPT
+# INPUT regels voor huidige setup (SSH + WireGuard)
+iptables -A INPUT -i lo -j ACCEPT
 iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-iptables -A INPUT -p tcp --dport 40111 -j LOG_ACCEPT
-iptables -A INPUT -p udp --dport 51820 -j LOG_ACCEPT
-iptables -A INPUT -s 10.0.0.0/24 -j LOG_ACCEPT
-iptables -A INPUT -s 10.0.0.0/24 -j ACCEPT
-iptables -A FORWARD -s 10.0.0.0/24 -j ACCEPT
-iptables -A FORWARD -d 10.0.0.0/24 -j ACCEPT
-
-# Kubernetes control-plane en node poorten (intern)
-iptables -A INPUT -s 10.0.0.0/24 -p tcp --dport 7443 -j ACCEPT
-iptables -A INPUT -s 10.0.0.0/24 -p tcp --dport 6443 -j ACCEPT
-iptables -A INPUT -s 10.0.0.0/24 -p tcp --dport 2379:2380 -j ACCEPT
-iptables -A INPUT -s 10.0.0.0/24 -p tcp --dport 10250:10259 -j ACCEPT
-
-# alles wat overblijft
+iptables -A INPUT -p tcp --dport 40111 -j ACCEPT
+iptables -A INPUT -p udp --dport 51820 -j ACCEPT
+iptables -A INPUT -p icmp -j ACCEPT
 iptables -A INPUT -j LOG_DROP
 
-# Kubernetes / interne forwarding toestaan
+# FORWARD voor WireGuard subnet
 iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 iptables -A FORWARD -s 10.0.0.0/24 -j ACCEPT
 iptables -A FORWARD -d 10.0.0.0/24 -j ACCEPT
-iptables -A FORWARD -s 10.244.0.0/16 -j ACCEPT
-iptables -A FORWARD -d 10.244.0.0/16 -j ACCEPT
 
-# IPv6 firewall toepassen (established accept, daarna drop)
+# IPv6 firewall toepassen (zelfde basis)
 ip6tables -F
 ip6tables -P INPUT DROP
 ip6tables -P FORWARD DROP
@@ -106,6 +57,7 @@ ip6tables -A INPUT -i lo -j ACCEPT
 ip6tables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 ip6tables -A INPUT -p tcp --dport 40111 -j ACCEPT
 ip6tables -A INPUT -p udp --dport 51820 -j ACCEPT
+ip6tables -A INPUT -p ipv6-icmp -j ACCEPT
 ip6tables -A INPUT -j DROP
 ip6tables -A FORWARD -j DROP
 
@@ -119,4 +71,4 @@ if command -v ip6tables-save >/dev/null 2>&1; then
   ip6tables-save > /etc/iptables/rules.v6
 fi
 
-echo "Firewall regels toegepast voor IPv4 en IPv6."
+echo "Firewall regels toegepast voor huidige setup (SSH + WireGuard)."

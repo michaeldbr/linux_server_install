@@ -240,11 +240,11 @@ echo "Role opgeslagen in /etc/linux_server_role"
 "$SSH_SCRIPT"
 echo "Stap SSH afgerond ✔️"
 
-"$FIREWALL_SCRIPT"
-echo "Stap firewall afgerond ✔️"
-
 check_network_ready
 echo "Stap netwerk-check afgerond ✔️"
+
+"$FIREWALL_SCRIPT"
+echo "Stap firewall afgerond ✔️"
 
 INTERNAL_IP="$INTERNAL_IP" "$WIREGUARD_SCRIPT"
 echo "Stap WireGuard afgerond ✔️"
