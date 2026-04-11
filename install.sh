@@ -43,14 +43,14 @@ cleanup() {
 trap cleanup EXIT
 
 fetch_scripts_if_needed() {
-  local ssh_script_local="${BASE_DIR}/scripts/01_ssh/install_ssh.sh"
-  local firewall_script_local="${BASE_DIR}/scripts/02_firewall/install_firewall.sh"
-  local wg_script_local="${BASE_DIR}/scripts/03_wireguard/install_wireguard.sh"
-  local k8s_script_local="${BASE_DIR}/scripts/04_kubernetes/install_kubernetes.sh"
-  local master_script_local="${BASE_DIR}/scripts/05_master/setup_master.sh"
-  local haproxy_script_local="${BASE_DIR}/scripts/05_master/install_haproxy.sh"
-  local etcd_check_script_local="${BASE_DIR}/scripts/06_checks/check_etcd.sh"
-  local logging_script_local="${BASE_DIR}/scripts/07_logging/install_fluentbit.sh"
+  local ssh_script_local="${BASE_DIR}/scripts/01_ssh.sh"
+  local firewall_script_local="${BASE_DIR}/scripts/01_firewall.sh"
+  local wg_script_local="${BASE_DIR}/scripts/01_wireguard.sh"
+  local k8s_script_local="${BASE_DIR}/scripts/01_kubernetes.sh"
+  local master_script_local="${BASE_DIR}/scripts/02_master_setup.sh"
+  local haproxy_script_local="${BASE_DIR}/scripts/02_master_haproxy.sh"
+  local etcd_check_script_local="${BASE_DIR}/scripts/02_master_etcd_check.sh"
+  local logging_script_local="${BASE_DIR}/scripts/01_fluentbit.sh"
 
   if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$master_script_local" && -x "$haproxy_script_local" && -x "$etcd_check_script_local" && -x "$logging_script_local" ]]; then
     echo "$BASE_DIR"
@@ -63,7 +63,7 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh/install_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/02_firewall/install_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/03_wireguard/install_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/04_kubernetes/install_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/setup_master.sh" || ! -x "$TMP_REPO_DIR/scripts/05_master/install_haproxy.sh" || ! -x "$TMP_REPO_DIR/scripts/06_checks/check_etcd.sh" || ! -x "$TMP_REPO_DIR/scripts/07_logging/install_fluentbit.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/01_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/02_master_setup.sh" || ! -x "$TMP_REPO_DIR/scripts/02_master_haproxy.sh" || ! -x "$TMP_REPO_DIR/scripts/02_master_etcd_check.sh" || ! -x "$TMP_REPO_DIR/scripts/01_fluentbit.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi
@@ -273,13 +273,13 @@ ask_hostname() {
 }
 
 SCRIPT_ROOT="$(fetch_scripts_if_needed)"
-SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_ssh/install_ssh.sh"
-FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/02_firewall/install_firewall.sh"
-WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/03_wireguard/install_wireguard.sh"
-KUBERNETES_SCRIPT="${SCRIPT_ROOT}/scripts/04_kubernetes/install_kubernetes.sh"
-MASTER_SCRIPT="${SCRIPT_ROOT}/scripts/05_master/setup_master.sh"
-ETCD_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/06_checks/check_etcd.sh"
-LOGGING_SCRIPT="${SCRIPT_ROOT}/scripts/07_logging/install_fluentbit.sh"
+SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_ssh.sh"
+FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/01_firewall.sh"
+WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/01_wireguard.sh"
+KUBERNETES_SCRIPT="${SCRIPT_ROOT}/scripts/01_kubernetes.sh"
+MASTER_SCRIPT="${SCRIPT_ROOT}/scripts/02_master_setup.sh"
+ETCD_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/02_master_etcd_check.sh"
+LOGGING_SCRIPT="${SCRIPT_ROOT}/scripts/01_fluentbit.sh"
 
 check_minimum_resources
 echo "Stap resource-check afgerond ✔️"

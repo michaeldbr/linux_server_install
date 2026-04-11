@@ -5,7 +5,7 @@ echo "127.0.0.1 k8s-api.internal" >> /etc/hosts
 set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HAPROXY_SCRIPT="${BASE_DIR}/install_haproxy.sh"
+HAPROXY_SCRIPT="${BASE_DIR}/02_master_haproxy.sh"
 KUBEADM_CONFIG_FILE="/etc/kubernetes/kubeadm-config.yaml"
 
 if [[ ! -x "$HAPROXY_SCRIPT" ]]; then

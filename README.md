@@ -13,14 +13,17 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 ## Structuur
 
 - `install.sh`: hoofdscript met de interactieve vragen (2x controle per invoer).
-- `scripts/01_ssh/install_ssh.sh`: SSH installatie en hardening.
-- `scripts/02_firewall/install_firewall.sh`: iptables regels + IPv6 firewall toepassen.
-- `scripts/03_wireguard/install_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
-- `scripts/04_kubernetes/install_kubernetes.sh`: containerd + `kubeadm`, `kubelet`, `kubectl` installatie en config.
-- `scripts/05_master/install_haproxy.sh`: configureert bestaande HAProxy voor masters (`k8s-api.internal:7443`) zonder automatische installatie.
-- `scripts/05_master/setup_master.sh`: role-specifieke master setup met `kubeadm init` en cluster post-init.
-- `scripts/06_checks/check_etcd.sh`: basiscontrole voor control-plane endpoints en componentstatus.
-- `scripts/07_logging/install_fluentbit.sh`: installeert Fluent Bit en forward logs naar centrale endpoint.
+- `scripts/`: alle scripts staan direct in deze map (geen submappen).
+- Fase 1 (server voorbereiden): `01_<applicatie>.sh`
+  - `scripts/01_ssh.sh`: SSH installatie en hardening.
+  - `scripts/01_firewall.sh`: iptables regels + IPv6 firewall toepassen.
+  - `scripts/01_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
+  - `scripts/01_kubernetes.sh`: containerd + `kubeadm`, `kubelet`, `kubectl` installatie en config.
+  - `scripts/01_fluentbit.sh`: installeert Fluent Bit en forward logs naar centrale endpoint.
+- Fase 2 (rollen): `02_<role>_<applicatie>.sh`
+  - `scripts/02_master_haproxy.sh`: configureert bestaande HAProxy voor masters (`k8s-api.internal:7443`) zonder automatische installatie.
+  - `scripts/02_master_setup.sh`: role-specifieke master setup met `kubeadm init` en cluster post-init.
+  - `scripts/02_master_etcd_check.sh`: basiscontrole voor control-plane endpoints en componentstatus.
 
 ## Wat doet het script?
 
