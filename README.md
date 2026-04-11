@@ -14,11 +14,14 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 
 - `install.sh`: hoofdscript met de interactieve vragen (2x controle per invoer).
 - `scripts/`: alle scripts staan direct in deze map (geen submappen).
-- Fase 1 (server voorbereiden): `01_<applicatie>.sh`
-  - `scripts/01_ssh.sh`: SSH installatie en hardening.
-  - `scripts/01_firewall.sh`: iptables regels + IPv6 firewall toepassen.
-  - `scripts/01_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
-- Fase 2 (rollen): role wordt vastgelegd (`frontend`/`backend`), maar er draaien momenteel geen aparte role-scripts.
+- Fase 1 (server voorbereiden): `01_<volgorde>_<applicatie>.sh`
+  - `scripts/01_01_ssh.sh`: SSH installatie en hardening.
+  - `scripts/01_02_firewall.sh`: iptables regels + IPv6 firewall toepassen.
+  - `scripts/01_03_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
+  - `scripts/01_99_phase_check.sh`: eindcontrole fase 1.
+- Fase 2 (rollen): `02_<role>_<volgorde>_<check>.sh`
+  - `scripts/02_frontend_99_phase_check.sh`: eindcontrole fase 2 voor role frontend.
+  - `scripts/02_backend_99_phase_check.sh`: eindcontrole fase 2 voor role backend.
 
 ## Wat doet het script?
 
@@ -39,4 +42,4 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Controleert of WireGuard (`wg-quick@wg0` + interface `wg0`) echt actief is.
 - Voert preflight resource-check uit (minimaal 2 CPU cores en 2GB RAM).
 - Logt na elke installatiestap expliciet `Stap ... afgerond ✔️` voor debugging.
-- Slaat gekozen role (`frontend`/`backend`) op in `/etc/linux_server_role` zonder aanvullende role-specifieke scripts.
+- Voert per script en per fase een controle uit. Bij failure wordt maximaal 3 keer geprobeerd om de stap te herstellen door het script opnieuw uit te voeren; daarna stopt de installatie.

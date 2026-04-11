@@ -43,11 +43,14 @@ cleanup() {
 trap cleanup EXIT
 
 fetch_scripts_if_needed() {
-  local ssh_script_local="${BASE_DIR}/scripts/01_ssh.sh"
-  local firewall_script_local="${BASE_DIR}/scripts/01_firewall.sh"
-  local wg_script_local="${BASE_DIR}/scripts/01_wireguard.sh"
+  local ssh_script_local="${BASE_DIR}/scripts/01_01_ssh.sh"
+  local firewall_script_local="${BASE_DIR}/scripts/01_02_firewall.sh"
+  local wg_script_local="${BASE_DIR}/scripts/01_03_wireguard.sh"
+  local phase1_check_script_local="${BASE_DIR}/scripts/01_99_phase_check.sh"
+  local phase2_frontend_check_script_local="${BASE_DIR}/scripts/02_frontend_99_phase_check.sh"
+  local phase2_backend_check_script_local="${BASE_DIR}/scripts/02_backend_99_phase_check.sh"
 
-  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" ]]; then
+  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$phase1_check_script_local" && -x "$phase2_frontend_check_script_local" && -x "$phase2_backend_check_script_local" ]]; then
     echo "$BASE_DIR"
     return 0
   fi
@@ -58,7 +61,7 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_wireguard.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_02_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_03_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/01_99_phase_check.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_99_phase_check.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_99_phase_check.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi
@@ -128,6 +131,85 @@ check_wireguard_ready() {
     echo "WireGuard interface wg0 is niet beschikbaar." >&2
     exit 1
   fi
+}
+
+check_ssh_ready() {
+  if ! grep -Eq '^[#[:space:]]*Port[[:space:]]+40111$' /etc/ssh/sshd_config; then
+    echo "SSH poort 40111 staat niet correct in /etc/ssh/sshd_config." >&2
+    return 1
+  fi
+
+  if ! systemctl is-active --quiet ssh && ! systemctl is-active --quiet sshd; then
+    echo "SSH service is niet actief." >&2
+    return 1
+  fi
+}
+
+check_firewall_ready() {
+  if ! iptables -S INPUT | grep -q -- '-P INPUT DROP'; then
+    echo "Firewall INPUT policy staat niet op DROP." >&2
+    return 1
+  fi
+
+  if ! iptables -C INPUT -p tcp --dport 40111 -j ACCEPT >/dev/null 2>&1; then
+    echo "Firewall regel voor SSH poort 40111 ontbreekt." >&2
+    return 1
+  fi
+
+  if ! iptables -C INPUT -p udp --dport 51820 -j ACCEPT >/dev/null 2>&1; then
+    echo "Firewall regel voor WireGuard poort 51820 ontbreekt." >&2
+    return 1
+  fi
+}
+
+run_script_with_retries() {
+  local check_fn="$1"
+  local step_label="$2"
+  shift 2
+  local attempts=3
+  local i
+
+  for ((i=1; i<=attempts; i++)); do
+    echo "Uitvoeren ${step_label} (poging ${i}/${attempts})..."
+    if ! "$@"; then
+      echo "${step_label} script faalde op poging ${i}." >&2
+      continue
+    fi
+
+    if "$check_fn"; then
+      echo "${step_label} afgerond ✔️"
+      return 0
+    fi
+
+    echo "${step_label} check faalde op poging ${i}." >&2
+  done
+
+  echo "${step_label} niet succesvol na ${attempts} pogingen. Installatie wordt gestopt." >&2
+  exit 1
+}
+
+run_phase_check_with_retries() {
+  local phase_check_script="$1"
+  local phase_label="$2"
+  local fix_role="${3:-}"
+  local attempts=3
+  local i
+
+  for ((i=1; i<=attempts; i++)); do
+    echo "Controle ${phase_label} (poging ${i}/${attempts})..."
+    if "$phase_check_script"; then
+      echo "${phase_label} controle afgerond ✔️"
+      return 0
+    fi
+
+    if [[ -n "$fix_role" ]]; then
+      echo "$fix_role" > /etc/linux_server_role
+      echo "Herstelactie: role opnieuw gezet op ${fix_role}."
+    fi
+  done
+
+  echo "${phase_label} controle faalt na ${attempts} pogingen. Installatie wordt gestopt." >&2
+  exit 1
 }
 
 ask_twice_match() {
@@ -213,9 +295,12 @@ ask_hostname() {
 }
 
 SCRIPT_ROOT="$(fetch_scripts_if_needed)"
-SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_ssh.sh"
-FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/01_firewall.sh"
-WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/01_wireguard.sh"
+SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_01_ssh.sh"
+FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/01_02_firewall.sh"
+WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/01_03_wireguard.sh"
+PHASE1_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/01_99_phase_check.sh"
+PHASE2_FRONTEND_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/02_frontend_99_phase_check.sh"
+PHASE2_BACKEND_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/02_backend_99_phase_check.sh"
 
 check_minimum_resources
 echo "Stap resource-check afgerond ✔️"
@@ -237,24 +322,24 @@ hostnamectl set-hostname "$HOSTNAME_VALUE"
 echo "$ROLE" > /etc/linux_server_role
 echo "Role opgeslagen in /etc/linux_server_role"
 
-"$SSH_SCRIPT"
-echo "Stap SSH afgerond ✔️"
+run_script_with_retries check_ssh_ready "Stap fase 1.01 SSH" "$SSH_SCRIPT"
 
 check_network_ready
 echo "Stap netwerk-check afgerond ✔️"
 
-"$FIREWALL_SCRIPT"
-echo "Stap firewall afgerond ✔️"
+run_script_with_retries check_firewall_ready "Stap fase 1.02 firewall" "$FIREWALL_SCRIPT"
 
-INTERNAL_IP="$INTERNAL_IP" "$WIREGUARD_SCRIPT"
-echo "Stap WireGuard afgerond ✔️"
+run_script_with_retries check_wireguard_ready "Stap fase 1.03 WireGuard" env "INTERNAL_IP=${INTERNAL_IP}" "$WIREGUARD_SCRIPT"
 echo "Controle onderlinge connectiviteit..."
 ping -c 2 10.0.0.1 || true
 ping -c 2 10.0.0.2 || true
 ping -c 2 10.0.0.3 || true
-check_wireguard_ready
-echo "Stap WireGuard-check afgerond ✔️"
+run_phase_check_with_retries "$PHASE1_CHECK_SCRIPT" "Fase 1"
 
-echo "Geen role-specifieke scripts geconfigureerd voor ${ROLE}."
+if [[ "$ROLE" == "frontend" ]]; then
+  run_phase_check_with_retries "$PHASE2_FRONTEND_CHECK_SCRIPT" "Fase 2 frontend" "frontend"
+elif [[ "$ROLE" == "backend" ]]; then
+  run_phase_check_with_retries "$PHASE2_BACKEND_CHECK_SCRIPT" "Fase 2 backend" "backend"
+fi
 
 echo "Installatie afgerond."
