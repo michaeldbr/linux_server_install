@@ -6,6 +6,11 @@ if ! systemctl is-active --quiet ssh && ! systemctl is-active --quiet sshd; then
   exit 1
 fi
 
+if ! systemctl is-active --quiet cron && ! systemctl is-active --quiet crond; then
+  echo "Cron service is niet actief." >&2
+  exit 1
+fi
+
 if ! iptables -S INPUT | grep -q -- '-P INPUT DROP'; then
   echo "Firewall INPUT policy staat niet op DROP." >&2
   exit 1

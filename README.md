@@ -16,8 +16,9 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - `scripts/`: alle scripts staan direct in deze map (geen submappen).
 - Fase 1 (server voorbereiden): `01_<volgorde>_<applicatie>.sh`
   - `scripts/01_01_ssh.sh`: SSH installatie en hardening.
-  - `scripts/01_02_firewall.sh`: iptables regels + IPv6 firewall toepassen.
-  - `scripts/01_03_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
+  - `scripts/01_02_cronjob.sh`: cron(crond) installeren en service activeren.
+  - `scripts/01_03_firewall.sh`: iptables regels + IPv6 firewall toepassen.
+  - `scripts/01_04_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
   - `scripts/01_99_phase_check.sh`: eindcontrole fase 1.
 - Fase 2 (rollen): `02_<role>_<volgorde>_<check>.sh`
   - `scripts/02_frontend_99_phase_check.sh`: eindcontrole fase 2 voor role frontend.
@@ -32,6 +33,7 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Configureert SSH key login voor `michael` met de opgegeven publieke sleutel.
 - Zet SSH op poort `40111`.
 - Zet root login via SSH uit.
+- Installeert en activeert cron/crond in fase 1.
 - Installeert de gevraagde iptables regels.
 - Voert firewall pas laat in fase 1 uit (na netwerk-check en vlak voor WireGuard) om blokkades tijdens setup te voorkomen.
 - Staat FORWARD verkeer voor het WireGuard subnet `10.0.0.0/24` toe (huidige setup zonder Kubernetes/HAProxy).

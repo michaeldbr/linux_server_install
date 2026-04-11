@@ -44,13 +44,14 @@ trap cleanup EXIT
 
 fetch_scripts_if_needed() {
   local ssh_script_local="${BASE_DIR}/scripts/01_01_ssh.sh"
-  local firewall_script_local="${BASE_DIR}/scripts/01_02_firewall.sh"
-  local wg_script_local="${BASE_DIR}/scripts/01_03_wireguard.sh"
+  local cronjob_script_local="${BASE_DIR}/scripts/01_02_cronjob.sh"
+  local firewall_script_local="${BASE_DIR}/scripts/01_03_firewall.sh"
+  local wg_script_local="${BASE_DIR}/scripts/01_04_wireguard.sh"
   local phase1_check_script_local="${BASE_DIR}/scripts/01_99_phase_check.sh"
   local phase2_frontend_check_script_local="${BASE_DIR}/scripts/02_frontend_99_phase_check.sh"
   local phase2_backend_check_script_local="${BASE_DIR}/scripts/02_backend_99_phase_check.sh"
 
-  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$phase1_check_script_local" && -x "$phase2_frontend_check_script_local" && -x "$phase2_backend_check_script_local" ]]; then
+  if [[ -x "$ssh_script_local" && -x "$cronjob_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$phase1_check_script_local" && -x "$phase2_frontend_check_script_local" && -x "$phase2_backend_check_script_local" ]]; then
     echo "$BASE_DIR"
     return 0
   fi
@@ -61,7 +62,7 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_02_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_03_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/01_99_phase_check.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_99_phase_check.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_99_phase_check.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_02_cronjob.sh" || ! -x "$TMP_REPO_DIR/scripts/01_03_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_04_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/01_99_phase_check.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_99_phase_check.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_99_phase_check.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi
@@ -158,6 +159,18 @@ check_firewall_ready() {
 
   if ! iptables -C INPUT -p udp --dport 51820 -j ACCEPT >/dev/null 2>&1; then
     echo "Firewall regel voor WireGuard poort 51820 ontbreekt." >&2
+    return 1
+  fi
+}
+
+check_cronjob_ready() {
+  if ! command -v crontab >/dev/null 2>&1; then
+    echo "crontab command ontbreekt." >&2
+    return 1
+  fi
+
+  if ! systemctl is-active --quiet cron && ! systemctl is-active --quiet crond; then
+    echo "Cron service is niet actief." >&2
     return 1
   fi
 }
@@ -296,8 +309,9 @@ ask_hostname() {
 
 SCRIPT_ROOT="$(fetch_scripts_if_needed)"
 SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_01_ssh.sh"
-FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/01_02_firewall.sh"
-WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/01_03_wireguard.sh"
+CRONJOB_SCRIPT="${SCRIPT_ROOT}/scripts/01_02_cronjob.sh"
+FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/01_03_firewall.sh"
+WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/01_04_wireguard.sh"
 PHASE1_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/01_99_phase_check.sh"
 PHASE2_FRONTEND_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/02_frontend_99_phase_check.sh"
 PHASE2_BACKEND_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/02_backend_99_phase_check.sh"
@@ -323,13 +337,14 @@ echo "$ROLE" > /etc/linux_server_role
 echo "Role opgeslagen in /etc/linux_server_role"
 
 run_script_with_retries check_ssh_ready "Stap fase 1.01 SSH" "$SSH_SCRIPT"
+run_script_with_retries check_cronjob_ready "Stap fase 1.02 cronjob" "$CRONJOB_SCRIPT"
 
 check_network_ready
 echo "Stap netwerk-check afgerond ✔️"
 
-run_script_with_retries check_firewall_ready "Stap fase 1.02 firewall" "$FIREWALL_SCRIPT"
+run_script_with_retries check_firewall_ready "Stap fase 1.03 firewall" "$FIREWALL_SCRIPT"
 
-run_script_with_retries check_wireguard_ready "Stap fase 1.03 WireGuard" env "INTERNAL_IP=${INTERNAL_IP}" "$WIREGUARD_SCRIPT"
+run_script_with_retries check_wireguard_ready "Stap fase 1.04 WireGuard" env "INTERNAL_IP=${INTERNAL_IP}" "$WIREGUARD_SCRIPT"
 echo "Controle onderlinge connectiviteit..."
 ping -c 2 10.0.0.1 || true
 ping -c 2 10.0.0.2 || true
