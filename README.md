@@ -18,9 +18,7 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
   - `scripts/01_ssh.sh`: SSH installatie en hardening.
   - `scripts/01_firewall.sh`: iptables regels + IPv6 firewall toepassen.
   - `scripts/01_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
-- Fase 2 (rollen): `02_<role>_<applicatie>.sh`
-  - `scripts/02_backend_setup.sh`: role-specifieke backend setup (momenteel no-op placeholder).
-  - `scripts/02_frontend_setup.sh`: role-specifieke frontend setup (momenteel no-op placeholder).
+- Fase 2 (rollen): role wordt vastgelegd (`frontend`/`backend`), maar er draaien momenteel geen aparte role-scripts.
 
 ## Wat doet het script?
 
@@ -40,3 +38,4 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Controleert of WireGuard (`wg-quick@wg0` + interface `wg0`) echt actief is.
 - Voert preflight resource-check uit (minimaal 2 CPU cores en 2GB RAM).
 - Logt na elke installatiestap expliciet `Stap ... afgerond ✔️` voor debugging.
+- Slaat gekozen role (`frontend`/`backend`) op in `/etc/linux_server_role` zonder aanvullende role-specifieke scripts.
