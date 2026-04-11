@@ -46,14 +46,10 @@ fetch_scripts_if_needed() {
   local ssh_script_local="${BASE_DIR}/scripts/01_ssh.sh"
   local firewall_script_local="${BASE_DIR}/scripts/01_firewall.sh"
   local wg_script_local="${BASE_DIR}/scripts/01_wireguard.sh"
-  local k8s_script_local="${BASE_DIR}/scripts/01_kubernetes.sh"
   local backend_script_local="${BASE_DIR}/scripts/02_backend_setup.sh"
   local frontend_script_local="${BASE_DIR}/scripts/02_frontend_setup.sh"
-  local haproxy_script_local="${BASE_DIR}/scripts/02_backend_haproxy.sh"
-  local etcd_check_script_local="${BASE_DIR}/scripts/02_backend_etcd_check.sh"
-  local logging_script_local="${BASE_DIR}/scripts/01_fluentbit.sh"
 
-  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$k8s_script_local" && -x "$backend_script_local" && -x "$frontend_script_local" && -x "$haproxy_script_local" && -x "$etcd_check_script_local" && -x "$logging_script_local" ]]; then
+  if [[ -x "$ssh_script_local" && -x "$firewall_script_local" && -x "$wg_script_local" && -x "$backend_script_local" && -x "$frontend_script_local" ]]; then
     echo "$BASE_DIR"
     return 0
   fi
@@ -64,7 +60,7 @@ fetch_scripts_if_needed() {
   TMP_REPO_DIR="$(mktemp -d)"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_REPO_DIR"
 
-  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/01_kubernetes.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_setup.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_setup.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_haproxy.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_etcd_check.sh" || ! -x "$TMP_REPO_DIR/scripts/01_fluentbit.sh" ]]; then
+  if [[ ! -x "$TMP_REPO_DIR/scripts/01_ssh.sh" || ! -x "$TMP_REPO_DIR/scripts/01_firewall.sh" || ! -x "$TMP_REPO_DIR/scripts/01_wireguard.sh" || ! -x "$TMP_REPO_DIR/scripts/02_backend_setup.sh" || ! -x "$TMP_REPO_DIR/scripts/02_frontend_setup.sh" ]]; then
     echo "Vereiste scripts ontbreken in de opgehaalde repository." >&2
     exit 1
   fi
@@ -132,41 +128,6 @@ check_wireguard_ready() {
 
   if ! retry 10 3 wg show wg0 >/dev/null 2>&1; then
     echo "WireGuard interface wg0 is niet beschikbaar." >&2
-    exit 1
-  fi
-}
-
-check_kubelet_healthy() {
-  echo "Controle kubelet health..."
-
-  if ! retry 20 3 systemctl is-active --quiet kubelet; then
-    echo "kubelet service is niet actief." >&2
-    exit 1
-  fi
-
-  if command -v curl >/dev/null 2>&1; then
-    if ! retry 20 3 curl -fsS http://127.0.0.1:10248/healthz >/dev/null 2>&1; then
-      echo "kubelet health endpoint is niet healthy (http://127.0.0.1:10248/healthz)." >&2
-      exit 1
-    fi
-  elif command -v wget >/dev/null 2>&1; then
-    if ! retry 20 3 wget -qO- http://127.0.0.1:10248/healthz >/dev/null 2>&1; then
-      echo "kubelet health endpoint is niet healthy (http://127.0.0.1:10248/healthz)." >&2
-      exit 1
-    fi
-  else
-    echo "Geen curl/wget beschikbaar voor kubelet health check." >&2
-    exit 1
-  fi
-}
-
-check_k8s_api() {
-  if [[ ! -f /etc/kubernetes/admin.conf ]]; then
-    return 0
-  fi
-
-  if ! su - michael -c "kubectl get nodes" >/dev/null 2>&1; then
-    echo "API niet bereikbaar" >&2
     exit 1
   fi
 }
@@ -241,26 +202,6 @@ ask_role() {
 }
 
 
-ask_first_backend() {
-  local answer
-  while true; do
-    answer="$(ask_twice_match "Is dit de eerste backend? (ja/nee) ")"
-    case "${answer,,}" in
-      ja)
-        printf "ja"
-        return 0
-        ;;
-      nee)
-        printf "nee"
-        return 0
-        ;;
-      *)
-        echo "Ongeldig antwoord. Gebruik ja of nee."
-        ;;
-    esac
-  done
-}
-
 ask_hostname() {
   local host
   while true; do
@@ -277,27 +218,20 @@ SCRIPT_ROOT="$(fetch_scripts_if_needed)"
 SSH_SCRIPT="${SCRIPT_ROOT}/scripts/01_ssh.sh"
 FIREWALL_SCRIPT="${SCRIPT_ROOT}/scripts/01_firewall.sh"
 WIREGUARD_SCRIPT="${SCRIPT_ROOT}/scripts/01_wireguard.sh"
-KUBERNETES_SCRIPT="${SCRIPT_ROOT}/scripts/01_kubernetes.sh"
 BACKEND_SCRIPT="${SCRIPT_ROOT}/scripts/02_backend_setup.sh"
 FRONTEND_SCRIPT="${SCRIPT_ROOT}/scripts/02_frontend_setup.sh"
-ETCD_CHECK_SCRIPT="${SCRIPT_ROOT}/scripts/02_backend_etcd_check.sh"
-LOGGING_SCRIPT="${SCRIPT_ROOT}/scripts/01_fluentbit.sh"
 
 check_minimum_resources
 echo "Stap resource-check afgerond ✔️"
 
 INTERNAL_IP="$(ask_internal_ip)"
 ROLE="$(ask_role)"
-FIRST_BACKEND="nee"
-if [[ "$ROLE" == "backend" ]]; then
-  FIRST_BACKEND="$(ask_first_backend)"
-fi
 HOSTNAME_VALUE="$(ask_hostname)"
 
 echo "Gekozen intern IP: ${INTERNAL_IP}"
 echo "Gekozen role: ${ROLE}"
 if [[ "$ROLE" == "backend" ]]; then
-  echo "Eerste backend: ${FIRST_BACKEND}"
+  echo "Backend role geselecteerd."
 fi
 echo "Gekozen hostname: ${HOSTNAME_VALUE}"
 
@@ -313,9 +247,6 @@ echo "Stap SSH afgerond ✔️"
 "$FIREWALL_SCRIPT"
 echo "Stap firewall afgerond ✔️"
 
-"$LOGGING_SCRIPT"
-echo "Stap logging-agent afgerond ✔️"
-
 check_network_ready
 echo "Stap netwerk-check afgerond ✔️"
 
@@ -328,30 +259,9 @@ ping -c 2 10.0.0.3 || true
 check_wireguard_ready
 echo "Stap WireGuard-check afgerond ✔️"
 
-"$KUBERNETES_SCRIPT"
-echo "Stap Kubernetes tools afgerond ✔️"
-
-check_kubelet_healthy
-echo "Stap kubelet-check afgerond ✔️"
-
 if [[ "$ROLE" == "backend" ]]; then
-  INTERNAL_IP="$INTERNAL_IP" FIRST_BACKEND="$FIRST_BACKEND" "$BACKEND_SCRIPT"
+  "$BACKEND_SCRIPT"
   echo "Stap backend-setup afgerond ✔️"
-
-  if [[ "$FIRST_BACKEND" == "nee" ]]; then
-    if [[ ! -x /root/join.sh ]]; then
-      echo "Join script ontbreekt: /root/join.sh" >&2
-      exit 1
-    fi
-    bash /root/join.sh
-    echo "Stap control-plane join afgerond ✔️"
-  fi
-
-  check_k8s_api
-  echo "Stap API-check afgerond ✔️"
-
-  "$ETCD_CHECK_SCRIPT"
-  echo "Stap etcd/control-plane check afgerond ✔️"
 elif [[ "$ROLE" == "frontend" ]]; then
   "$FRONTEND_SCRIPT"
   echo "Stap frontend-setup afgerond ✔️"
