@@ -11,6 +11,16 @@ if ! systemctl is-active --quiet cron && ! systemctl is-active --quiet crond; th
   exit 1
 fi
 
+if ! systemctl is-active --quiet webmin; then
+  echo "Webmin service is niet actief." >&2
+  exit 1
+fi
+
+if ! grep -Eq '^port=40112$' /etc/webmin/miniserv.conf; then
+  echo "Webmin draait niet op poort 40112." >&2
+  exit 1
+fi
+
 if ! iptables -S INPUT | grep -q -- '-P INPUT DROP'; then
   echo "Firewall INPUT policy staat niet op DROP." >&2
   exit 1
@@ -18,6 +28,11 @@ fi
 
 if ! iptables -C INPUT -p tcp --dport 40111 -j ACCEPT >/dev/null 2>&1; then
   echo "Firewall SSH regel (40111) ontbreekt." >&2
+  exit 1
+fi
+
+if ! iptables -C INPUT -p tcp --dport 40112 -j ACCEPT >/dev/null 2>&1; then
+  echo "Firewall Webmin regel (40112) ontbreekt." >&2
   exit 1
 fi
 

@@ -39,6 +39,7 @@ iptables -A LOG_DROP -j DROP
 iptables -A INPUT -i lo -j ACCEPT
 iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 iptables -A INPUT -p tcp --dport 40111 -j ACCEPT
+iptables -A INPUT -p tcp --dport 40112 -j ACCEPT
 iptables -A INPUT -p udp --dport 51820 -j ACCEPT
 iptables -A INPUT -p icmp -j ACCEPT
 iptables -A INPUT -j LOG_DROP
@@ -56,6 +57,7 @@ ip6tables -P OUTPUT ACCEPT
 ip6tables -A INPUT -i lo -j ACCEPT
 ip6tables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 ip6tables -A INPUT -p tcp --dport 40111 -j ACCEPT
+ip6tables -A INPUT -p tcp --dport 40112 -j ACCEPT
 ip6tables -A INPUT -p udp --dport 51820 -j ACCEPT
 ip6tables -A INPUT -p ipv6-icmp -j ACCEPT
 ip6tables -A INPUT -j DROP

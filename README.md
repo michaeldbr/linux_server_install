@@ -17,8 +17,9 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Fase 1 (server voorbereiden): `01_<volgorde>_<applicatie>.sh`
   - `scripts/01_01_ssh.sh`: SSH installatie en hardening.
   - `scripts/01_02_cronjob.sh`: cron(crond) installeren en service activeren.
-  - `scripts/01_03_firewall.sh`: iptables regels + IPv6 firewall toepassen.
-  - `scripts/01_04_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
+  - `scripts/01_03_webmin.sh`: Webmin installeren en toegang op poort `40112` zetten.
+  - `scripts/01_04_firewall.sh`: iptables regels + IPv6 firewall toepassen.
+  - `scripts/01_05_wireguard.sh`: WireGuard installeren + `wg0.conf` en keys genereren.
   - `scripts/01_99_phase_check.sh`: eindcontrole fase 1.
 - Fase 2 (rollen): `02_<role>_<volgorde>_<check>.sh`
   - `scripts/02_frontend_01_apache.sh`: Apache installeren en vereiste modules activeren.
@@ -37,6 +38,7 @@ Met dit commando haal je `install.sh` op en voer je het direct uit op je server.
 - Zet SSH op poort `40111`.
 - Zet root login via SSH uit.
 - Installeert en activeert cron/crond in fase 1.
+- Installeert Webmin in fase 1 en zet Webmin toegang op poort `40112`.
 - Installeert de gevraagde iptables regels.
 - Voert firewall pas laat in fase 1 uit (na netwerk-check en vlak voor WireGuard) om blokkades tijdens setup te voorkomen.
 - Staat FORWARD verkeer voor het WireGuard subnet `10.0.0.0/24` toe (huidige setup zonder Kubernetes/HAProxy).
